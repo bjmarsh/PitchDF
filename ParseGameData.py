@@ -1,32 +1,31 @@
+#! /usr/bin/env python
 import ROOT
-import urllib2
+import glob
+import os
 import xml.etree.ElementTree as ET
 import PitchTree as pt
 
 def processAction(action, game_state):
     att = action.attrib
 
+    # runner tag should take care of most of these
+    ignoreActions=["Game Advisory", "Passed Ball", "Wild Pitch", "Defensive Switch", "Defensive Sub",
+                   "Stolen Base 2B", "Stolen Base 3B", "Caught Stealing 2B", "Caught Stealing 3B",
+                   "Pickoff 1B", "Pickoff 2B", "Pickoff 3B", "Player Injured", "Runner Out", "Balk",
+                   "Manager Review", "Defensive Indiff", "Batter Turn", "Pickoff Error 1B",
+                   "Pickoff Error 2B", "Pickoff Error 3B", "Error", "Umpire Review", "Ejection",
+                   "Picked off stealing 2B", "Picked off stealing 3B", "Caught Stealing Home",
+                   "Runner Advance", "Field Error", "Pitcher Switch", "Picked off stealing home", 
+                   "Pickoff Attempt 1B", "Stolen Base Home"]
+
     if att['event'] == 'Offensive Sub':
         game_state['batter'] = att['player']
     elif att['event'] == 'Pitching Substitution':
         game_state['pitcher'] = att['player']
-    elif att['event'] == 'Game Advisory':
-        pass
-    elif att['event'] == 'Passed Ball':
-        pass
-    elif att['event'] == 'Wild Pitch':
-        pass
-    elif att['event'] == 'Defensive Switch':
-        pass
-    elif att['event'] == 'Stolen Base 2B':
-        pass
-    elif att['event'] == 'Stolen Base 3B':
-        pass
-    elif att['event'] == 'Caught Stealing 2B':
-        pass
-    elif att['event'] == 'Caught Stealing 3B':
-        pass
     elif att['event'] == 'Umpire Substitution':
+        if "replaces HP umpire" in att['des']:
+            game_state['umpire'] = int(att['player'])
+    elif att['event'] in ignoreActions:
         pass
     else:
         raise Exception("Unknown action: {0}".format(att['event']))
@@ -38,9 +37,9 @@ def processRunner(runner, game_state):
     base_map = {'1B':'first', '2B':'second', '3B':'third'}
 
     if att['start'] != '':
-        game_state[base_map[att['start']]] = ''
+        game_state[base_map[att['start']]] = -1
     if att['end'] != '':
-        game_state[base_map[att['end']]] = att['id']
+        game_state[base_map[att['end']]] = int(att['id'])
     
 
 def processPitch(pitch, game_state):
@@ -56,11 +55,11 @@ def processPitch(pitch, game_state):
     #     game_state["inning"], game_state['pitcher'], game_state['batter'], game_state['b'], game_state['s'], game_state['o'], pitch_type, att['type'])
 
     if 'on_1b' in att.keys():
-        game_state['first'] = att['on_1b']
+        game_state['first'] = int(att['on_1b'])
     if 'on_2b' in att.keys():
-        game_state['second'] = att['on_2b']
+        game_state['second'] = int(att['on_2b'])
     if 'on_3b' in att.keys():
-        game_state['third'] = att['on_3b']
+        game_state['third'] = int(att['on_3b'])
 
     ## save pitch info here!
     pt.Fill(game_state,att)
@@ -76,12 +75,13 @@ def processAtBat(atbat, game_state):
     att = atbat.attrib
     game_state['b'] = 0
     game_state['s'] = 0
-    game_state['batter'] = att['batter']
-    game_state['pitcher'] = att['pitcher']
+    game_state['batter'] = int(att['batter'])
+    game_state['pitcher'] = int(att['pitcher'])
     game_state['PH'] = att['p_throws']
     game_state['BH'] = att['stand']
-    game_state['home_runs'] = att['home_team_runs']
-    game_state['away_runs'] = att['away_team_runs']
+    game_state['home_score'] = att['home_team_runs']
+    game_state['away_score'] = att['away_team_runs']
+    game_state['event'] = att['event']
 
     # print att['des']
     # print game_state
@@ -94,47 +94,76 @@ def processAtBat(atbat, game_state):
             processPitch(evt, game_state)
         elif evt_type == 'runner':
             processRunner(evt, game_state)
-        elif evt_type == 'po' and 'Pickoff Attempt' in evt.attrib['des']:
+        elif evt_type == 'po':
             pass
         else:
             raise Exception('Unknown event within atbat: {0}'.format(evt_type))
 
     game_state['o'] = att['o']
 
+def parseGame(gameID):
+
+    base_dir = "/nfs-7/userdata/bemarsh/gamelogs/2015/" + gameID
+    inningXML = open(os.path.join(base_dir,"inning_all.xml"))
+    playerXML = open(os.path.join(base_dir,"players.xml"))
+
+    gameData = ET.fromstring(inningXML.read())
+    playerData = ET.fromstring(playerXML.read())
+    
+    inningXML.close()
+    playerXML.close()
+
+    game_state = {'batter':-1, 'pitcher':-1, 'inning':1, 'half':'top', 'b':0, 's':0, 'o':0, 'first':-1, 'second':-1, 'third':-1, 'home_score':0, 'away_score':0, 'umpire':-1, 'BH':'R', 'PH':'L', 'event':''}
+
+    game_state['gid'] = gameID
+    game_state['year'] = int(gameID[4:8])
+    game_state['month'] = int(gameID[9:11])
+    game_state['day'] = int(gameID[12:14])
+    game_state['away_team'] = gameID[15:18]
+    game_state['home_team'] = gameID[22:25]
+    game_state['DH'] = int(gameID[-1])
+
+    for ump in playerData[2]:
+        if ump.attrib["position"]=="home":
+            game_state["umpire"] = int(ump.attrib["id"])
+
+    for inning in gameData:
+        game_state['inning'] = int(inning.attrib['num'])
+    
+        # loop over top/bottom
+        for i in range(len(inning)):
+            half = inning[i]
+            game_state['o'] = 0
+
+            if half.tag not in ['top','bottom']:
+                raise Exception(half.tag + " is not a valid half-inning name!!")
+
+            game_state['half'] = half.tag
+    
+            for j in range(len(half)):
+                evt = half[j]
+                evt_type = evt.tag
+            
+                if evt_type == 'atbat':
+                    processAtBat(evt, game_state)
+                elif evt_type == 'action':
+                    processAction(evt, game_state)
+                else:
+                    raise Exception("Unknown event within inning: {0}".format(evt_type))
+                
+
+## Open up output root file and initialize tree
 fout = ROOT.TFile("pitches.root","RECREATE")
 pt.Init()
 
-url = "http://gd2.mlb.com/components/game/mlb/year_2016/month_04/day_15/gid_2016_04_15_colmlb_chnmlb_1/inning/inning_all.xml"
-response = urllib2.urlopen(url)
-xml = response.read()
+curdir = os.getcwd()
+os.chdir("/nfs-7/userdata/bemarsh/gamelogs/2015")
+gameIDs = glob.glob("*2015_*")
+os.chdir(curdir)
 
-game = ET.fromstring(xml)
+for gameID in gameIDs:
+    print "Parsing", gameID, "..."
+    parseGame(gameID)
 
-game_state = {'batter':'', 'pitcher':'', 'inning':1, 'half':'top', 'b':0, 's':0, 'o':0, 'first':'', 'second':'', 'third':'', 'home_runs':0, 'away_runs':0, 'umpire':'', 'BH':'R', 'PH':'L'}
-
-for inning in game:
-    game_state['inning'] = int(inning.attrib['num'])
-    
-    # loop over top/bottom
-    for i in range(len(inning)):
-        half = inning[i]
-        game_state['o'] = 0
-
-        if half.tag not in ['top','bottom']:
-            raise Exception(half.tag + " is not a valid half-inning name!!")
-
-        game_state['half'] = half.tag
-    
-        for j in range(len(half)):
-            evt = half[j]
-            evt_type = evt.tag
-            
-            if evt_type == 'atbat':
-                processAtBat(evt, game_state)
-            elif evt_type == 'action':
-                processAction(evt, game_state)
-            else:
-                raise Exception("Unknown event within inning: {0}".format(evt_type))
-                
 pt.t.Write()
 fout.Close()

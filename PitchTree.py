@@ -34,6 +34,7 @@ def Init():
     t.Branch("des", var.des)
     t.Branch("type", var.type)
     t.Branch("pitch_type", var.pitch_type)
+    t.Branch("strike_type", var.strike_type)
 
     t.Branch("x", var.x, 'x/D')
     t.Branch("y", var.y, 'y/D')
@@ -66,10 +67,10 @@ def Init():
 def Fill(game_state, pitch):
     global t
     # game state
-    var.year = game_state['year']
-    var.month = game_state['month']
-    var.day = game_state['day']
-    var.DH = game_state['DH']
+    var.year[0] = game_state['year']
+    var.month[0] = game_state['month']
+    var.day[0] = game_state['day']
+    var.DH[0] = game_state['DH']
     var.inning[0] = game_state["inning"]
     var.batter[0] = game_state["batter"]
     var.pitcher[0] = game_state["pitcher"]
@@ -94,8 +95,25 @@ def Fill(game_state, pitch):
 
     #pitchf/x data
     var.des.replace(0, n, pitch["des"])
-    var.pitch_type.replace(0, n, pitch["pitch_type"])
     var.type.replace(0, n, pitch["type"])
+    var.pitch_type.replace(0, n, pitch["pitch_type"])
+    st = pitch['type']
+    if st=='S':
+        if 'Called' in pitch['des']:
+            st = 'C'
+        elif 'Swinging' in pitch['des']:
+            st = 'S'
+        elif 'Foul Tip' in pitch['des']:
+            st = 'FT'
+        elif 'Foul Bunt' in pitch['des']:
+            st = 'FB'
+        elif 'Foul'in pitch['des']:
+            st = 'F'
+        elif 'Missed Bunt' in pitch['des']:
+            st = 'MB'
+        else:
+            raise Exception("Unknown strike description: "+pitch['des'])
+    var.strike_type.replace(0, n, st)
 
     var.x[0] = float(pitch.get("x",-9999))
     var.y[0] = float(pitch.get("y",-9999))

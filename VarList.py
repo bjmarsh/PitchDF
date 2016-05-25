@@ -31,6 +31,7 @@ event = ROOT.std.string()
 des = ROOT.std.string()
 type = ROOT.std.string()
 pitch_type = ROOT.std.string()
+strike_type = ROOT.std.string()  ## C,S,F,FT,FB,MB,B for called, swinging, foul, foul tip, foul bunt, missed bunt, ball
 
 x = np.zeros(1, dtype=float)
 y = np.zeros(1, dtype=float)

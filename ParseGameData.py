@@ -72,6 +72,8 @@ def processPitch(pitch, game_state):
                                                                                                 
 
 def processAtBat(atbat, game_state):
+    global unique_events
+
     att = atbat.attrib
     game_state['b'] = 0
     game_state['s'] = 0
@@ -82,6 +84,10 @@ def processAtBat(atbat, game_state):
     game_state['home_score'] = att['home_team_runs']
     game_state['away_score'] = att['away_team_runs']
     game_state['event'] = att['event']
+
+    if game_state['event'] not in unique_events:
+        print game_state['event']
+        unique_events.append(game_state['event'])
 
     # print att['des']
     # print game_state
@@ -150,7 +156,8 @@ def parseGame(gameID):
                     processAction(evt, game_state)
                 else:
                     raise Exception("Unknown event within inning: {0}".format(evt_type))
-                
+
+unique_events = []                
 
 ## Open up output root file and initialize tree
 fout = ROOT.TFile("pitches.root","RECREATE")

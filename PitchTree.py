@@ -21,6 +21,7 @@ def Init():
     t.Branch("runner_first", var.runner_first, 'runner_first/I')
     t.Branch("runner_third", var.runner_third, 'runner_third/I')
     t.Branch("umpire", var.umpire, 'umpire/I')
+    t.Branch("is_last_pitch",var.is_last_pitch, 'is_last_pitch/I')
 
     t.Branch("gid", var.gid)
     t.Branch("away_team", var.away_team)
@@ -142,6 +143,12 @@ def Fill(game_state, pitch):
     var.nasty[0] = int(pitch.get("nasty",-9999))
     var.spin_dir[0] = float(pitch.get("spin_dir",-9999))
     var.spin_rate[0] = float(pitch.get("spin_rate",-9999))
+
+    var.is_last_pitch[0] = 0
+    if var.type=='X' or 
+    (var.type=='B' and var.balls[0]==3) or
+    (var.strike_type in ['S','C','FB','FT','MB'] and var.strikes[0]==2):
+        var.is_last_pitch[0] = 1
 
     t.Fill()
 

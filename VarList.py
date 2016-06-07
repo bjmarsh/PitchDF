@@ -18,6 +18,7 @@ runner_first = np.zeros(1, dtype=int)
 runner_second = np.zeros(1, dtype=int)
 runner_third = np.zeros(1, dtype=int)
 umpire = np.zeros(1, dtype=int)
+is_last_pitch = np.zeros(1,dtype=int)
 
 gid = ROOT.std.string()
 away_team = ROOT.std.string()

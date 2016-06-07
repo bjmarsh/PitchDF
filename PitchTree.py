@@ -145,9 +145,10 @@ def Fill(game_state, pitch):
     var.spin_rate[0] = float(pitch.get("spin_rate",-9999))
 
     var.is_last_pitch[0] = 0
-    if var.type=='X' or 
-    (var.type=='B' and var.balls[0]==3) or
-    (var.strike_type in ['S','C','FB','FT','MB'] and var.strikes[0]==2):
+    if var.type=='X' or \
+            (var.type=='B' and var.balls[0]==3) or \
+            (var.strike_type in ['S','C','FB','FT','MB'] and var.strikes[0]==2) or \
+            var.des=="Hit By Pitch":
         var.is_last_pitch[0] = 1
 
     t.Fill()

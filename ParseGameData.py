@@ -86,11 +86,9 @@ def processAtBat(atbat, game_state):
     game_state['event'] = att['event']
 
     if game_state['event'] not in unique_events:
-        print game_state['event']
+        print game_state['event'], game_state['gid']
         unique_events.append(game_state['event'])
 
-    # print att['des']
-    # print game_state
 
     for i in range(len(atbat)):
         evt = atbat[i]
@@ -169,7 +167,7 @@ gameIDs = glob.glob("*2015_*")
 os.chdir(curdir)
 
 for gameID in gameIDs:
-    print "Parsing", gameID, "..."
+    #print "Parsing", gameID, "..."
     parseGame(gameID)
 
 pt.t.Write()

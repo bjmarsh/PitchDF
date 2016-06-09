@@ -16,9 +16,9 @@ def processAction(action, game_state):
                    "Pickoff Error 2B", "Pickoff Error 3B", "Error", "Umpire Review", "Ejection",
                    "Picked off stealing 2B", "Picked off stealing 3B", "Caught Stealing Home",
                    "Runner Advance", "Field Error", "Pitcher Switch", "Picked off stealing home", 
-                   "Pickoff Attempt 1B", "Stolen Base Home"]
+                   "Pickoff Attempt 1B", "Stolen Base Home", "Base Running Double Play"]
 
-    if att['event'] == 'Offensive Sub':
+    if att['event'].lower() == 'offensive sub':
         game_state['batter'] = att['player']
     elif att['event'] == 'Pitching Substitution':
         game_state['pitcher'] = att['player']
@@ -40,6 +40,12 @@ def processRunner(runner, game_state):
         game_state[base_map[att['start']]] = -1
     if att['end'] != '':
         game_state[base_map[att['end']]] = int(att['id'])
+
+    if att.get('score','F')=='T' and game_state['home_score']>-1:
+        if game_state['half']=='top':
+            game_state['away_score'] += 1
+        if game_state['half']=='bottom':
+            game_state['home_score'] += 1
     
 
 def processPitch(pitch, game_state):
@@ -81,12 +87,20 @@ def processAtBat(atbat, game_state):
     game_state['pitcher'] = int(att['pitcher'])
     game_state['PH'] = att['p_throws']
     game_state['BH'] = att['stand']
-    game_state['home_score'] = att['home_team_runs']
-    game_state['away_score'] = att['away_team_runs']
+    try:
+        game_state['home_score'] = int(att['home_team_runs'])
+        game_state['away_score'] = int(att['away_team_runs'])
+    except KeyError:
+        game_state['home_score'] = -1
+        game_state['away_score'] = -1
+        if att['num']=='1':
+            # print "    WARNING: game scores not listed in XML!"
+            pass
+
     game_state['event'] = att['event']
 
     if game_state['event'] not in unique_events:
-        print game_state['event'], game_state['gid']
+        print "{0:25s}:{1}".format(game_state['event'], game_state['gid'])
         unique_events.append(game_state['event'])
 
 
@@ -107,7 +121,10 @@ def processAtBat(atbat, game_state):
 
 def parseGame(gameID):
 
-    base_dir = "/nfs-7/userdata/bemarsh/gamelogs/2015/" + gameID
+    game_state = {'batter':-1, 'pitcher':-1, 'inning':1, 'half':'top', 'b':0, 's':0, 'o':0, 'first':-1, 'second':-1, 'third':-1, 'home_score':0, 'away_score':0, 'umpire':-1, 'BH':'R', 'PH':'L', 'event':''}
+    game_state['year'] = int(gameID[4:8])
+
+    base_dir = "/nfs-7/userdata/bemarsh/gamelogs/{0}/".format(year) + gameID
     inningXML = open(os.path.join(base_dir,"inning_all.xml"))
     playerXML = open(os.path.join(base_dir,"players.xml"))
 
@@ -117,10 +134,7 @@ def parseGame(gameID):
     inningXML.close()
     playerXML.close()
 
-    game_state = {'batter':-1, 'pitcher':-1, 'inning':1, 'half':'top', 'b':0, 's':0, 'o':0, 'first':-1, 'second':-1, 'third':-1, 'home_score':0, 'away_score':0, 'umpire':-1, 'BH':'R', 'PH':'L', 'event':''}
-
     game_state['gid'] = gameID
-    game_state['year'] = int(gameID[4:8])
     game_state['month'] = int(gameID[9:11])
     game_state['day'] = int(gameID[12:14])
     game_state['away_team'] = gameID[15:18]
@@ -156,18 +170,19 @@ def parseGame(gameID):
                     raise Exception("Unknown event within inning: {0}".format(evt_type))
 
 unique_events = []                
+year = 2014
 
 ## Open up output root file and initialize tree
-fout = ROOT.TFile("pitches.root","RECREATE")
+fout = ROOT.TFile("pitches_{0}.root".format(year),"RECREATE")
 pt.Init()
 
 curdir = os.getcwd()
-os.chdir("/nfs-7/userdata/bemarsh/gamelogs/2015")
-gameIDs = glob.glob("*2015_*")
+os.chdir("/nfs-7/userdata/bemarsh/gamelogs/{0}".format(year))
+gameIDs = glob.glob("*{0}_*".format(year))
 os.chdir(curdir)
 
 for gameID in gameIDs:
-    #print "Parsing", gameID, "..."
+    # print "Parsing", gameID, "..."
     parseGame(gameID)
 
 pt.t.Write()

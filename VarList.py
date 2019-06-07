@@ -1,6 +1,8 @@
 import ROOT
 import numpy as np
 
+unique_pitch_types = ['UN', 'SI', 'SL', 'FF', 'FC', 'CU', 'CH', 'FT', 'FS', 'KC', 'EP', 'FO', 'PO', 'SC', 'KN', 'AB', 'IN', 'FA']
+
 ## game state stuff
 year = np.zeros(1, dtype=int)
 month = np.zeros(1, dtype=int)
@@ -12,11 +14,15 @@ pitcher = np.zeros(1, dtype=int)
 balls   = np.zeros(1, dtype=int)
 strikes = np.zeros(1, dtype=int)
 outs    = np.zeros(1, dtype=int)
+pitch_count = np.zeros(1, dtype=int)
 home_score = np.zeros(1, dtype=int)
 away_score = np.zeros(1, dtype=int)
+home_score_after = np.zeros(1, dtype=int)
+away_score_after = np.zeros(1, dtype=int)
 runner_first = np.zeros(1, dtype=int)
 runner_second = np.zeros(1, dtype=int)
 runner_third = np.zeros(1, dtype=int)
+base_state = np.zeros(1, dtype=int)
 umpire = np.zeros(1, dtype=int)
 is_last_pitch = np.zeros(1,dtype=int)
 
@@ -61,12 +67,17 @@ zone = np.zeros(1, dtype=int)
 nasty = np.zeros(1, dtype=int)
 spin_dir = np.zeros(1, dtype=float)
 spin_rate = np.zeros(1, dtype=float)
+pitch_type_id = np.zeros(1, dtype=int)
 
-
-
-
-
-
+# statcast hit data
+hit_x = np.zeros(1, dtype=float)
+hit_y = np.zeros(1, dtype=float)
+hit_launchAngle = np.zeros(1, dtype=float)
+hit_launchSpeed = np.zeros(1, dtype=float)
+hit_totalDistance = np.zeros(1, dtype=float)
+hit_location = np.zeros(1, dtype=int)
+hit_trajectory = ROOT.std.string()
+hit_hardness = ROOT.std.string()
 
 
 

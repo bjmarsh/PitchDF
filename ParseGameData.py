@@ -3,7 +3,8 @@ import ROOT
 import glob
 import os
 import xml.etree.ElementTree as ET
-import PitchTree as pt
+from PitchTree import PitchTree
+import VarList as var
 
 def processAction(action, game_state):
     att = action.attrib
@@ -16,7 +17,8 @@ def processAction(action, game_state):
                    "Pickoff Error 2B", "Pickoff Error 3B", "Error", "Umpire Review", "Ejection",
                    "Picked off stealing 2B", "Picked off stealing 3B", "Caught Stealing Home",
                    "Runner Advance", "Field Error", "Pitcher Switch", "Picked off stealing home", 
-                   "Pickoff Attempt 1B", "Stolen Base Home", "Base Running Double Play"]
+                   "Pickoff Attempt 1B", "Stolen Base Home", "Base Running Double Play",
+                   "Pitch Challenge", "Pickoff Attempt 2B"]
 
     if att['event'].lower() == 'offensive sub':
         game_state['batter'] = att['player']
@@ -36,7 +38,7 @@ def processRunner(runner, game_state):
 
     base_map = {'1B':'first', '2B':'second', '3B':'third'}
 
-    if att['start'] != '':
+    if att['start'] != '' and game_state[base_map[att['start']]]==int(att['id']):
         game_state[base_map[att['start']]] = -1
     if att['end'] != '':
         game_state[base_map[att['end']]] = int(att['id'])
@@ -46,6 +48,14 @@ def processRunner(runner, game_state):
             game_state['away_score'] += 1
         if game_state['half']=='bottom':
             game_state['home_score'] += 1
+
+    game_state["base_state"] = 0
+    if game_state["first"] != -1:
+        game_state["base_state"] |= (1<<0)
+    if game_state["second"] != -1:
+        game_state["base_state"] |= (1<<1)
+    if game_state["third"] != -1:
+        game_state["base_state"] |= (1<<2)
     
 
 def processPitch(pitch, game_state):
@@ -67,6 +77,9 @@ def processPitch(pitch, game_state):
     if 'on_3b' in att.keys():
         game_state['third'] = int(att['on_3b'])
 
+    game_state['pitch_counts'][game_state['pitcher']] += 1
+    game_state['cur_pc'] = game_state['pitch_counts'][game_state['pitcher']]
+
     ## save pitch info here!
     pt.Fill(game_state,att)
 
@@ -87,22 +100,23 @@ def processAtBat(atbat, game_state):
     game_state['pitcher'] = int(att['pitcher'])
     game_state['PH'] = att['p_throws']
     game_state['BH'] = att['stand']
+
     try:
-        game_state['home_score'] = int(att['home_team_runs'])
-        game_state['away_score'] = int(att['away_team_runs'])
+        game_state['home_score_after'] = int(att['home_team_runs'])
+        game_state['away_score_after'] = int(att['away_team_runs'])
     except KeyError:
-        game_state['home_score'] = -1
-        game_state['away_score'] = -1
-        if att['num']=='1':
-            # print "    WARNING: game scores not listed in XML!"
-            pass
+        game_state['home_score_after'] = -1
+        game_state['away_score_after'] = -1
+        print "    WARNING: game scores not listed in XML!"
+
+    if game_state['pitcher'] not in game_state['pitch_counts']:
+        game_state['pitch_counts'][game_state['pitcher']] = 0
 
     game_state['event'] = att['event']
 
     if game_state['event'] not in unique_events:
         print "{0:25s}:{1}".format(game_state['event'], game_state['gid'])
         unique_events.append(game_state['event'])
-
 
     for i in range(len(atbat)):
         evt = atbat[i]
@@ -121,7 +135,8 @@ def processAtBat(atbat, game_state):
 
 def parseGame(gameID):
 
-    game_state = {'batter':-1, 'pitcher':-1, 'inning':1, 'half':'top', 'b':0, 's':0, 'o':0, 'first':-1, 'second':-1, 'third':-1, 'home_score':0, 'away_score':0, 'umpire':-1, 'BH':'R', 'PH':'L', 'event':''}
+    game_state = {'batter':-1, 'pitcher':-1, 'inning':1, 'half':'top', 'b':0, 's':0, 'o':0, 'first':-1, 'second':-1, 'third':-1, 'base_state':0, 'home_score':0, 'away_score':0, 'home_score_after':0, 'away_score_after':0,
+                  'umpire':-1, 'BH':'R', 'PH':'L', 'event':'', 'pitch_counts':{}, 'cur_pc':0}
     game_state['year'] = int(gameID[4:8])
 
     base_dir = "/nfs-7/userdata/bemarsh/gamelogs/{0}/".format(year) + gameID
@@ -170,20 +185,23 @@ def parseGame(gameID):
                     raise Exception("Unknown event within inning: {0}".format(evt_type))
 
 unique_events = []                
-year = 2014
+year = 2019
 
 ## Open up output root file and initialize tree
 fout = ROOT.TFile("pitches_{0}.root".format(year),"RECREATE")
+pt = PitchTree()
 pt.Init()
 
 curdir = os.getcwd()
 os.chdir("/nfs-7/userdata/bemarsh/gamelogs/{0}".format(year))
-gameIDs = glob.glob("*{0}_*".format(year))
+gameIDs = sorted(glob.glob("*{0}_*".format(year)))
 os.chdir(curdir)
 
 for gameID in gameIDs:
     # print "Parsing", gameID, "..."
     parseGame(gameID)
+
+print "Final pitch list:", var.unique_pitch_types
 
 pt.t.Write()
 fout.Close()

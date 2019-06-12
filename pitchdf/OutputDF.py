@@ -12,24 +12,24 @@ class OutputDF(Output):
         ("away_team",   "category"),
         ("home_team",   "category"),
         ("inning",      "uint8"),
-        ("half",        "uint8"),
+        ("half",        "category"),
         ("balls",       "uint8"),
         ("strikes",     "uint8"),
         ("outs",        "uint8"),
         ("base_state",  "uint8"),
         ("batter",      "uint32"),
         ("pitcher",     "uint32"),
-        ("BH",          "uint8"),
-        ("PH",          "uint8"),
+        ("BH",          "category"),
+        ("PH",          "category"),
         ("pitch_count", "uint8"),
         ("home_score",  "uint8"),
         ("away_score",  "uint8"),
         ("home_score_after", "uint8"),
         ("away_score_after", "uint8"),
-        ("runner_first",  "uint32"),
-        ("runner_second", "uint32"),
-        ("runner_third",  "uint32"),
-        ("umpire",        "uint32"),
+        ("runner_first",  "int32"),
+        ("runner_second", "int32"),
+        ("runner_third",  "int32"),
+        ("umpire",        "int32"),
         ("is_last_pitch", "bool"),
         ("event",        "category"),
         ("des",          "category"),
@@ -84,15 +84,15 @@ class OutputDF(Output):
         self._data["away_team"] +=   [game_state.away_team]
         self._data["home_team"] +=   [game_state.home_team]
         self._data["inning"] +=      [game_state.inning]
-        self._data["half"] +=        [{'top':0,'bottom':1}[game_state.half]]
+        self._data["half"] +=        [game_state.half]
         self._data["balls"] +=       [game_state.b]
         self._data["strikes"] +=     [game_state.s]
         self._data["outs"] +=        [game_state.o]
         self._data["base_state"] +=  [game_state.base_state]
         self._data["batter"] +=      [game_state.batter]
         self._data["pitcher"] +=     [game_state.pitcher]
-        self._data["BH"] +=          [{'R':0,'L':1}[game_state.BH]]
-        self._data["PH"] +=          [{'R':0,'L':1}[game_state.PH]]
+        self._data["BH"] +=          [game_state.BH]
+        self._data["PH"] +=          [game_state.PH]
         self._data["pitch_count"] += [game_state.cur_pc]
         self._data["home_score"] +=  [game_state.home_score]
         self._data["away_score"] +=  [game_state.away_score]

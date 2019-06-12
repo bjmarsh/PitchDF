@@ -3,6 +3,7 @@ import gzip, json, glob
 import datetime as dt
 from Output import Output
 from OutputROOT import OutputROOT
+from OutputDF import OutputDF
 from GameState import GameState
 
 class GameJSONParser:
@@ -99,7 +100,8 @@ class GameJSONParser:
         pinfo.end_speed = pitch["pitchData"].get("endSpeed",-9999)
         pinfo.sz_top = pitch["pitchData"].get("strikeZoneTop",-9999)
         pinfo.sz_bot = pitch["pitchData"].get("strikeZoneBottom",-9999)
-        pinfo.zone = pitch["pitchData"].get("zone",-9999)
+        pinfo.zone = pitch["pitchData"].get("zone",-1)
+        pinfo.nasty = int(pitch["pitchData"].get("nastyFactor",-1))
         pinfo.type_confidence = pitch["pitchData"].get("typeConfidence",-9999)
 
         if "hitData" in pitch:
@@ -108,8 +110,9 @@ class GameJSONParser:
             pinfo.hit_launchAngle = pitch["hitData"].get("launchAngle", -9999)
             pinfo.hit_launchSpeed = pitch["hitData"].get("launchSpeed", -9999)
             pinfo.hit_totalDistance = pitch["hitData"].get("totalDistance", -9999)
-            pinfo.hit_location = pitch["hitData"].get("location", -9999)
-            pinfo.hit_trajectory = pitch["hitData"].get("trajectory", -9999)
+            pinfo.hit_location = int(pitch["hitData"].get("location", -1))
+            pinfo.hit_hardness = pitch["hitData"].get("hardness", "NONE")
+            pinfo.hit_trajectory = pitch["hitData"].get("trajectory", "NONE")
 
 
         # print "Inning: {0}, Pitcher: {1}, Batter: {2}, Count: {3}-{4}, Outs: {5}, Pitch Type: {6}, Result: {7}".format(
@@ -235,7 +238,7 @@ class GameJSONParser:
         minute = int(g["datetime"]["time"].split(":")[1])
         self.game_state.date = dt.datetime(date.year, date.month, date.day, hour, minute)
         self.game_state.away_team = g["teams"]["away"]["teamCode"]
-        self.game_state.home_team = g["teams"]["away"]["teamCode"]
+        self.game_state.home_team = g["teams"]["home"]["teamCode"]
         self.game_state.DH = int(g["game"]["id"].split("-")[-1])
 
         ld = gd["liveData"]
@@ -257,7 +260,8 @@ if __name__=="__main__":
     gids = sorted([x.split("/")[-1] for x in glob.glob("/nfs-7/userdata/bemarsh/gamelogs/{0}/gid*".format(year))])
     # gids = ["gid_2018_04_18_chamlb_oakmlb_1"]
 
-    output = OutputROOT("pitches_{0}_fromJSON.root".format(year))
+    # output = OutputROOT("pitches_{0}_fromJSON.root".format(year))
+    output = OutputDF("pitches_{0}_fromJSON.pkl".format(year))
     parser = GameJSONParser(output)
 
     unique_events = []                

@@ -7,11 +7,6 @@ class OutputROOT(Output):
         self._fout = ROOT.TFile(output_file, "RECREATE")
         self._t = ROOT.TTree("Pitches","Pitches")
 
-        self._unique_pitch_types = [
-            'UN', 'SI', 'SL', 'FF', 'FC', 'CU', 'CH', 'FT', 'FS', 'KC', 
-            'EP', 'FO', 'PO', 'SC', 'KN', 'AB', 'IN', 'FA'
-            ]
-
         ## game state stuff
         self._year = np.zeros(1, dtype=int)
         self._month = np.zeros(1, dtype=int)
@@ -166,6 +161,7 @@ class OutputROOT(Output):
         self._t.Branch("hit_totalDistance", self._hit_totalDistance, "hit_totalDistance/D")
         self._t.Branch("hit_location", self._hit_location, "hit_location/I")
         self._t.Branch("hit_trajectory", self._hit_trajectory)
+        self._t.Branch("hit_hardness", self._hit_hardness)
         
     def add_entry(self, game_state, pitch):
         # game state
@@ -206,22 +202,7 @@ class OutputROOT(Output):
         self._des.replace(0, n, pitch.des)
         self._type.replace(0, n, pitch.type)
         self._pitch_type.replace(0, n, pitch.pitch_type)
-        st = pitch.type
-        if st=='S':
-            if 'Called' in pitch.des:
-                st = 'C'
-            elif 'Swinging' in pitch.des:
-                st = 'S'
-            elif 'Foul Tip' in pitch.des:
-                st = 'FT'
-            elif 'Foul Bunt' in pitch.des:
-                st = 'FB'
-            elif 'Foul' in pitch.des:
-                st = 'F'
-            elif 'Missed Bunt' in pitch.des:
-                st = 'MB'
-            else:
-                raise Exception("Unknown strike description: "+pitch.des)
+        st = Output.get_strike_type(pitch)
         self._strike_type.replace(0, n, st)
 
         self._x[0] = float(getattr(pitch,"x",-9999))
@@ -247,8 +228,8 @@ class OutputROOT(Output):
         self._break_angle[0] = float(getattr(pitch,"break_angle",-9999))
         self._break_length[0] = float(getattr(pitch,"break_length",-9999))
         self._type_confidence[0] = float(getattr(pitch,"type_confidence",-9999))
-        self._zone[0] = int(getattr(pitch,"zone",-9999))
-        self._nasty[0] = int(getattr(pitch,"nasty",-9999))
+        self._zone[0] = int(getattr(pitch,"zone",-1))
+        self._nasty[0] = int(getattr(pitch,"nasty",-1))
         self._spin_dir[0] = float(getattr(pitch,"spin_dir",-9999))
         self._spin_rate[0] = float(getattr(pitch,"spin_rate",-9999))
         if pitch.pitch_type not in self._unique_pitch_types:
@@ -256,12 +237,7 @@ class OutputROOT(Output):
             self._unique_pitch_types.append(pitch.pitch_type)
         # self._pitch_type_id[0] = int(self._unique_pitch_types.index(pitch.pitch_type)-1)
             
-        self._is_last_pitch[0] = 0
-        if self._type=='X' or \
-                (self._type=='B' and self._balls[0]==3) or \
-                (self._strike_type in ['S','C','FB','FT','MB'] and self._strikes[0]==2) or \
-                self._des=="Hit By Pitch":
-            self._is_last_pitch[0] = 1
+        self._is_last_pitch[0] = Output.is_last_pitch(game_state, pitch)
 
         # statcast hit data
         self._hit_x[0] = float(getattr(pitch,"hit_x", -9999))
@@ -269,8 +245,9 @@ class OutputROOT(Output):
         self._hit_launchAngle[0] = float(getattr(pitch,"hit_launchAngle", -9999))
         self._hit_launchSpeed[0] = float(getattr(pitch,"hit_launchSpeed", -9999))
         self._hit_totalDistance[0] = float(getattr(pitch,"hit_totalDistance", -9999))
-        self._hit_location[0] = int(getattr(pitch,"hit_location", -9999))
+        self._hit_location[0] = int(getattr(pitch,"hit_location", -1))
         self._hit_trajectory.replace(0, n, getattr(pitch,"hit_trajectory", "NONE"))
+        self._hit_hardness.replace(0, n, getattr(pitch,"hit_hardness", "NONE"))
 
         self._t.Fill()
 

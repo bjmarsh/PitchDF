@@ -15,7 +15,7 @@ class GameJSONParser:
                       "Pickoff 1B", "Ejection", "Defensive Indiff", "Stolen Base Home",
                       "Pickoff Error 2B", "Other Advance", "Pickoff Caught Stealing 2B",
                       "Pickoff 2B", "Caught Stealing Home","Error", "Pickoff Caught Stealing Home",
-                      "Pickoff 3B", "Pickoff Caught Stealing 3B")
+                      "Pickoff 3B", "Pickoff Caught Stealing 3B", "Pickoff Error 3B")
 
     def __init__(self, outputter):
         self.game_state = GameState()
@@ -153,7 +153,12 @@ class GameJSONParser:
                 self.game_state.third = -1
                 self.game_state.base_state = 0
                 self.game_state.o = 0
-
+                self.game_state.away_score_afterInn = \
+                    self.inning_scores[(self.game_state.half,self.game_state.inning)][0]
+                self.game_state.home_score_afterInn = \
+                    self.inning_scores[(self.game_state.half,self.game_state.inning)][1]
+                                                                          
+                
             self.game_state.b = 0
             self.game_state.s = 0
             self.game_state.batter = atbat["matchup"]["batter"]["id"]
@@ -161,8 +166,8 @@ class GameJSONParser:
             self.game_state.BH = atbat["matchup"]["batSide"]["code"]
             self.game_state.PH = atbat["matchup"]["pitchHand"]["code"]
 
-            self.game_state.home_score_after = atbat["result"]["homeScore"]
-            self.game_state.away_score_after = atbat["result"]["awayScore"]
+            self.game_state.home_score_afterAB = atbat["result"]["homeScore"]
+            self.game_state.away_score_afterAB = atbat["result"]["awayScore"]
 
             # get event type, check if it's the first time we've seen it
             self.game_state.event = atbat["result"]["event"]
@@ -216,10 +221,10 @@ class GameJSONParser:
                 for runner in runners:
                     self.process_runner(runner)
 
-            if self.game_state.home_score_after != self.game_state.home_score:
+            if self.game_state.home_score_afterAB != self.game_state.home_score:
                 print self.game_state
                 raise Exception("Home score mismatch!")
-            if self.game_state.away_score_after != self.game_state.away_score:
+            if self.game_state.away_score_afterAB != self.game_state.away_score:
                 print self.game_state
                 raise Exception("Away score mismatch!")
 
@@ -232,6 +237,7 @@ class GameJSONParser:
 
         self.game_state = GameState()
 
+        # get some auxiliary info about game
         self.game_state.gid = g["game"]["id"]
         self.game_state.gamePk = g["game"]["pk"]
         date = dt.datetime.strptime(g["datetime"]["dateTime"].split("T")[0],"%Y-%m-%d")
@@ -244,12 +250,25 @@ class GameJSONParser:
         self.game_state.home_team = g["teams"]["home"]["teamCode"]
         self.game_state.DH = int(g["game"]["id"].split("-")[-1])
 
+        # get HP umpire
         ld = gd["liveData"]
         umps = ld["boxscore"]["officials"]
         for ump in umps:
             if "home" in ump["officialType"].lower():
                 self.game_state.umpire = ump["official"]["id"]
 
+        # get the score after each inning, for use later
+        innings = ld["linescore"]["innings"]
+        ch, ca = 0, 0
+        self.inning_scores = {}
+        for inn in innings:
+            ca += inn["away"]["runs"]
+            self.inning_scores[("top",inn["num"])] = (ca,ch)
+            if "home" in inn and "runs" in inn["home"]:
+                ch += inn["home"]["runs"]
+            self.inning_scores[("bottom",inn["num"])] = (ca,ch)
+
+        # loop over all plays
         for play in ld["plays"]["allPlays"]:
             if play["result"]["type"] == "atBat":
                 self.process_atbat(play)
@@ -258,31 +277,10 @@ class GameJSONParser:
 
 
 if __name__=="__main__":
-
-    # year = 2018
-    # gids = sorted([x.split("/")[-1] for x in glob.glob("/nfs-7/userdata/bemarsh/gamelogs/{0}/gid*".format(year))])
-    # gids = ["gid_2018_04_18_chamlb_oakmlb_1"]
-
-    # # output = OutputROOT("pitches_{0}_fromJSON.root".format(year))
-    # output = OutputDF("pitches_{0}_fromJSON.pkl".format(year))
-    # parser = GameJSONParser(output)
-
-    # indir = "/nfs-7/userdata/bemarsh/gamelogs/{0}".format(year)
-    # for gid in gids:
-    #     fname = os.path.join(indir,gid,"livefeed.json.gz")
-    #     if not os.path.exists(fname):
-    #         print "ERROR: gid {0} does not exist. Skipping.".format(gid)
-    #         continue
-
-    #     gd = None
-    #     with gzip.open(fname, "rb") as fid:
-    #         gd = json.loads(fid.read().decode("utf-8"))
-
-    #     parser.parse_game(gd)
-
     
-    # output = OutputDF("pitches_test.pkl")
-    output = OutputCSV("pitches_test.csv")
+    output = OutputDF("pitches_test.pkl")
+    # output = OutputCSV("pitches_test.csv")
+    # output = OutputROOT("pitches_test.root")
     parser = GameJSONParser(output)
     pks = get_gamePks(dt.date(2019,06,11),dt.date(2019,06,12),teamId=112)
     for pk in pks:

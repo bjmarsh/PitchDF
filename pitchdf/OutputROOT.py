@@ -23,8 +23,10 @@ class OutputROOT(Output):
         self._pitch_count = np.zeros(1, dtype=int)
         self._home_score = np.zeros(1, dtype=int)
         self._away_score = np.zeros(1, dtype=int)
-        self._home_score_after = np.zeros(1, dtype=int)
-        self._away_score_after = np.zeros(1, dtype=int)
+        self._home_score_afterAB = np.zeros(1, dtype=int)
+        self._away_score_afterAB = np.zeros(1, dtype=int)
+        self._home_score_afterInn = np.zeros(1, dtype=int)
+        self._away_score_afterInn = np.zeros(1, dtype=int)
         self._runner_first = np.zeros(1, dtype=int)
         self._runner_second = np.zeros(1, dtype=int)
         self._runner_third = np.zeros(1, dtype=int)
@@ -102,8 +104,10 @@ class OutputROOT(Output):
         self._t.Branch("pitch_count", self._pitch_count, 'pitch_count/I')
         self._t.Branch("home_score", self._home_score, 'home_score/I')
         self._t.Branch("away_score", self._away_score, 'away_score/I')
-        self._t.Branch("home_score_after", self._home_score_after, 'home_score_after/I')
-        self._t.Branch("away_score_after", self._away_score_after, 'away_score_after/I')
+        self._t.Branch("home_score_afterAB", self._home_score_afterAB, 'home_score_afterAB/I')
+        self._t.Branch("away_score_afterAB", self._away_score_afterAB, 'away_score_afterAB/I')
+        self._t.Branch("home_score_afterInn", self._home_score_afterInn, 'home_score_afterInn/I')
+        self._t.Branch("away_score_afterInn", self._away_score_afterInn, 'away_score_afterInn/I')
         self._t.Branch("runner_first", self._runner_first, 'runner_first/I')
         self._t.Branch("runner_second", self._runner_second, 'runner_second/I')
         self._t.Branch("runner_third", self._runner_third, 'runner_third/I')
@@ -180,8 +184,10 @@ class OutputROOT(Output):
         self._pitch_count[0] = game_state.cur_pc
         self._home_score[0] = game_state.home_score
         self._away_score[0] = game_state.away_score
-        self._home_score_after[0] = game_state.home_score_after
-        self._away_score_after[0] = game_state.away_score_after
+        self._home_score_afterAB[0] = game_state.home_score_afterAB
+        self._away_score_afterAB[0] = game_state.away_score_afterAB
+        self._home_score_afterInn[0] = game_state.home_score_afterInn
+        self._away_score_afterInn[0] = game_state.away_score_afterInn
         self._runner_first[0] = game_state.first
         self._runner_second[0] = game_state.second
         self._runner_third[0] = game_state.third

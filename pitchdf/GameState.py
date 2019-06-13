@@ -25,9 +25,12 @@ class GameState:
         self.base_state = 0
         self.home_score = 0
         self.away_score = 0
-        # scores *after* current at-bat
-        self.home_score_after = 0
-        self.away_score_after = 0
+        # scores after current at-bat
+        self.home_score_afterAB = 0
+        self.away_score_afterAB = 0
+        # scores after current inning
+        self.home_score_afterInn = 0
+        self.away_score_afterInn = 0
         self.umpire = -1
         self.BH = "R"
         self.PH = "R"

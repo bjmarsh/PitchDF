@@ -24,8 +24,10 @@ class OutputDF(Output):
         ("pitch_count", "uint8"),
         ("home_score",  "uint8"),
         ("away_score",  "uint8"),
-        ("home_score_after", "uint8"),
-        ("away_score_after", "uint8"),
+        ("home_score_afterAB",  "uint8"),
+        ("away_score_afterAB",  "uint8"),
+        ("home_score_afterInn", "uint8"),
+        ("away_score_afterInn", "uint8"),
         ("runner_first",  "int32"),
         ("runner_second", "int32"),
         ("runner_third",  "int32"),
@@ -96,8 +98,10 @@ class OutputDF(Output):
         self._data["pitch_count"] += [game_state.cur_pc]
         self._data["home_score"] +=  [game_state.home_score]
         self._data["away_score"] +=  [game_state.away_score]
-        self._data["home_score_after"] += [game_state.away_score_after]
-        self._data["away_score_after"] += [game_state.home_score_after]
+        self._data["home_score_afterAB"]  += [game_state.home_score_afterAB]
+        self._data["away_score_afterAB"]  += [game_state.away_score_afterAB]
+        self._data["home_score_afterInn"] += [game_state.home_score_afterInn]
+        self._data["away_score_afterInn"] += [game_state.away_score_afterInn]
         self._data["runner_first"] +=  [game_state.first]
         self._data["runner_second"] += [game_state.second]
         self._data["runner_third"] +=  [game_state.third]

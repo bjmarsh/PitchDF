@@ -143,16 +143,18 @@ class OutputDF(Output):
         self._data["hit_trajectory"] +=    [getattr(pitch,"hit_y","NONE")]
         self._data["hit_hardness"] +=      [getattr(pitch,"hit_y","NONE")]
                
-    def convert_dtypes(self, df):
+    def create_df(self):
+        # turn dictionary in to dataframe
+        self._df = pd.DataFrame.from_dict(self._data)
+        # cast to correct types
         dcols = dict(self._columns)
-        for col in df.columns:
-            df[col] = df[col].astype(dcols[col])
+        for col,typ in dcols.items():
+            self._df[col] = self._df[col].astype(typ)
+        # put columns in correct order
+        self._df = self._df[list(zip(*self._columns)[0])]
 
     def write(self, use_gzip=True):
-        self._df = pd.DataFrame.from_dict(self._data)
-        self.convert_dtypes(self._df)
-        # re-order columns to pre-defined order
-        self._df = self._df[list(zip(*self._columns)[0])]
+        self.create_df()
         if use_gzip:
             with gzip.open(self._output_file+".gz", 'wb') as fid:
                 pickle.dump(self._df, fid, protocol=-1)
@@ -162,3 +164,15 @@ class OutputDF(Output):
 
     def __del__(self):
         pass
+
+
+class OutputCSV(OutputDF): 
+    def write(self, use_gzip=True):
+        self.create_df()
+        if use_gzip:
+            with gzip.open(self._output_file+".gz", 'wb') as fid:
+                fid.write(self._df.to_csv(index=False))
+        else:
+            with open(self._output_file, 'wb') as fid:
+                fid.write(self._df.to_csv(index=False))
+

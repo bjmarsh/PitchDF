@@ -20,6 +20,9 @@ def get_gamePks(startdate, enddate, teamId=None):
     pks = []
     for date in d["dates"]:
         for game in date["games"]:
+            typ = game["gameType"]
+            if typ not in ["R","P","D","L","W","F"]:
+                continue
             pks.append(game["gamePk"])
 
     return pks

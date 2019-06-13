@@ -3,8 +3,9 @@ import gzip, json, glob
 import datetime as dt
 from Output import Output
 from OutputROOT import OutputROOT
-from OutputDF import OutputDF
+from OutputDF import OutputDF, OutputCSV
 from GameState import GameState
+from DownloadGames import *
 
 class GameJSONParser:
     ignore_actions = ("Passed Ball", "Wild Pitch", "Caught Stealing 2B",
@@ -21,6 +22,8 @@ class GameJSONParser:
         if not isinstance(outputter, Output):
             raise TypeError("Must provide an Output object to the parser!")
         self.output = outputter
+        self.unique_events = []                
+
 
     def process_runner(self, runner):
         pid = runner["details"]["runner"]["id"]
@@ -163,9 +166,9 @@ class GameJSONParser:
 
             # get event type, check if it's the first time we've seen it
             self.game_state.event = atbat["result"]["event"]
-            if self.game_state.event not in unique_events:
-                print "{0:25s}:{1}".format(self.game_state.event, self.game_state.gid)
-                unique_events.append(self.game_state.event)
+            if self.game_state.event not in self.unique_events:
+                #print "{0:25s}:{1}".format(self.game_state.event, self.game_state.gid)
+                self.unique_events.append(self.game_state.event)
 
             if self.game_state.pitcher not in self.game_state.pitch_counts:
                 self.game_state.pitch_counts[self.game_state.pitcher] = 0
@@ -230,7 +233,7 @@ class GameJSONParser:
         self.game_state = GameState()
 
         self.game_state.gid = g["game"]["id"]
-        self.gamePk = g["game"]["pk"]
+        self.game_state.gamePk = g["game"]["pk"]
         date = dt.datetime.strptime(g["datetime"]["dateTime"].split("T")[0],"%Y-%m-%d")
         hour = int(g["datetime"]["time"].split(":")[0])
         if g["datetime"]["ampm"] == "PM" and hour != 12:
@@ -256,27 +259,38 @@ class GameJSONParser:
 
 if __name__=="__main__":
 
-    year = 2018
-    gids = sorted([x.split("/")[-1] for x in glob.glob("/nfs-7/userdata/bemarsh/gamelogs/{0}/gid*".format(year))])
+    # year = 2018
+    # gids = sorted([x.split("/")[-1] for x in glob.glob("/nfs-7/userdata/bemarsh/gamelogs/{0}/gid*".format(year))])
     # gids = ["gid_2018_04_18_chamlb_oakmlb_1"]
 
-    # output = OutputROOT("pitches_{0}_fromJSON.root".format(year))
-    output = OutputDF("pitches_{0}_fromJSON.pkl".format(year))
+    # # output = OutputROOT("pitches_{0}_fromJSON.root".format(year))
+    # output = OutputDF("pitches_{0}_fromJSON.pkl".format(year))
+    # parser = GameJSONParser(output)
+
+    # indir = "/nfs-7/userdata/bemarsh/gamelogs/{0}".format(year)
+    # for gid in gids:
+    #     fname = os.path.join(indir,gid,"livefeed.json.gz")
+    #     if not os.path.exists(fname):
+    #         print "ERROR: gid {0} does not exist. Skipping.".format(gid)
+    #         continue
+
+    #     gd = None
+    #     with gzip.open(fname, "rb") as fid:
+    #         gd = json.loads(fid.read().decode("utf-8"))
+
+    #     parser.parse_game(gd)
+
+    
+    # output = OutputDF("pitches_test.pkl")
+    output = OutputCSV("pitches_test.csv")
     parser = GameJSONParser(output)
-
-    unique_events = []                
-
-    indir = "/nfs-7/userdata/bemarsh/gamelogs/{0}".format(year)
-    for gid in gids:
-        fname = os.path.join(indir,gid,"livefeed.json.gz")
-        if not os.path.exists(fname):
-            print "ERROR: gid {0} does not exist. Skipping.".format(gid)
-            continue
-
-        gd = None
-        with gzip.open(fname, "rb") as fid:
-            gd = json.loads(fid.read().decode("utf-8"))
-
-        parser.parse_game(gd)
+    pks = get_gamePks(dt.date(2019,06,11),dt.date(2019,06,12),teamId=112)
+    for pk in pks:
+        d = download_single_game(pk)
+        if d:
+            parser.parse_game(d)
+    # ds = download_dates(dt.date(2019,06,11),dt.date(2019,06,12),teamId=112)
+    # for d in ds:
+    #     parser.parse_game(d)
 
     output.write()

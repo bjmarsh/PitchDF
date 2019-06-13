@@ -144,8 +144,8 @@ class OutputDF(Output):
         self._data["hit_launchSpeed"] +=   [float(getattr(pitch,"hit_launchSpeed",-9999))]
         self._data["hit_totalDistance"] += [float(getattr(pitch,"hit_totalDistance",-9999))]
         self._data["hit_location"] +=      [int(getattr(pitch,"hit_location",-1))]
-        self._data["hit_trajectory"] +=    [getattr(pitch,"hit_y","NONE")]
-        self._data["hit_hardness"] +=      [getattr(pitch,"hit_y","NONE")]
+        self._data["hit_trajectory"] +=    [getattr(pitch,"hit_trajectory","NONE")]
+        self._data["hit_hardness"] +=      [getattr(pitch,"hit_hardness","NONE")]
                
     def create_df(self):
         # turn dictionary in to dataframe
@@ -160,11 +160,9 @@ class OutputDF(Output):
     def write(self, use_gzip=True):
         self.create_df()
         if use_gzip:
-            with gzip.open(self._output_file+".gz", 'wb') as fid:
-                pickle.dump(self._df, fid, protocol=-1)
+            self._df.to_pickle(self._output_file+".gz", compression="gzip")
         else:
-            with open(self._output_file, 'wb') as fid:
-                pickle.dump(self._df, fid, protocol=-1)
+            self._df.to_pickle(self._output_file)
 
     def __del__(self):
         pass

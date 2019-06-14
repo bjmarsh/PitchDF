@@ -38,7 +38,7 @@ Some definitions of PITCHf/x fields taken from Mike Fast's post [here](https://f
 |`event`               |       `category` | string indicating outcome of at-bat (e.g. "Single","Home Run","Caught Stealing 2B")|
 |`des`                 |       `category` | description of pitch outcome. One of `['Automatic Ball', 'Ball', 'Ball In Dirt', 'Called Strike', 'Foul', 'Foul Bunt', 'Foul Tip', 'Hit By Pitch', 'In play, no out', 'In play, out(s)', 'In play, run(s)', 'Missed Bunt', 'Pitchout', 'Swinging Strike',  'Swinging Strike (Blocked)']`|
 |`strike_type`         |       `category` | `B`: ball, `C`: called strike, `S`: swinging strike, `F`: foul ball, `FT`: foul tip, `FB`: foul bunt, `MB`: missed bunt, `X`: in play|
-|`pitch_type`          |       `category` | 2-letter description of the type of pitch (4-seam fastball, slider, etc.). Including but potentially not limited to `['UN', 'SI', 'SL', 'FF', 'FC', 'CU', 'CH', 'FT', 'FS', 'KC','EP', 'FO', 'PO', 'SC', 'KN', 'AB', 'IN', 'FA']`. Note `'UN'` means "unknown"|
+|`pitch_type`          |       `category` | 2-letter description of the type of pitch (4-seam fastball, slider, etc.). Including but potentially not limited to `['UN', 'SI', 'SL', 'FF', 'FC', 'CU', 'CH', 'FT', 'FS', 'KC','EP', 'FO', 'PO', 'SC', 'KN', 'AB', 'IN', 'FA']`. Note `'UN'` means "unknown". See definitions [here](https://github.com/bjmarsh/PitchDF/blob/master/docs/pitch_types.md).|
 |`x`                   |        `float32` | x-coordinate of pitch in old gameday system. Out-dated, do not use.|
 |`y`                   |        `float32` | y-coordinate of pitch in old gameday system. Out-dated, do not use.|
 |`px`                  |        `float32` | horizontal location of pitch as it crosses plate. Measured in feet from center of plate|

@@ -170,6 +170,12 @@ class GameJSONParser:
             self.game_state.away_score_afterAB = atbat["result"]["awayScore"]
 
             # get event type, check if it's the first time we've seen it
+            if "event" not in atbat["result"]:
+                # a couple of randomly empty at-bats?
+                if len(atbat["playEvents"]) == 0:
+                    return
+                else:
+                    raise Exception("Faulty at-bat! gid: {0}, startTime: {1}".format(self.game_state.gid, atbat["about"]["startTime"]))
             self.game_state.event = atbat["result"]["event"]
             if self.game_state.event not in self.unique_events:
                 #print "{0:25s}:{1}".format(self.game_state.event, self.game_state.gid)

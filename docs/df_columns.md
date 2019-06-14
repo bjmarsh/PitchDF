@@ -6,7 +6,6 @@ All pitch attributes get a value of -9999 if they aren't specified in the game d
 
 Some definitions of PITCHf/x fields taken from Mike Fast's post [here](https://fastballs.wordpress.com/2007/08/02/glossary-of-the-gameday-pitch-fields/).
 
-
 | name | dtype | notes |
 |------|-------|-------|
 |`date`                | `datetime64[ns]` | scheduled game start time|
@@ -40,7 +39,31 @@ Some definitions of PITCHf/x fields taken from Mike Fast's post [here](https://f
 |`des`                 |       `category` | description of pitch outcome. One of `['Automatic Ball', 'Ball', 'Ball In Dirt', 'Called Strike', 'Foul', 'Foul Bunt', 'Foul Tip', 'Hit By Pitch', 'In play, no out', 'In play, out(s)', 'In play, run(s)', 'Missed Bunt', 'Pitchout', 'Swinging Strike',  'Swinging Strike (Blocked)']`|
 |`strike_type`         |       `category` | `B`: ball, `C`: called strike, `S`: swinging strike, `F`: foul ball, `FT`: foul tip, `FB`: foul bunt, `MB`: missed bunt, `X`: in play|
 |`pitch_type`          |       `category` | 2-letter description of the type of pitch (4-seam fastball, slider, etc.). Including but potentially not limited to `['UN', 'SI', 'SL', 'FF', 'FC', 'CU', 'CH', 'FT', 'FS', 'KC','EP', 'FO', 'PO', 'SC', 'KN', 'AB', 'IN', 'FA']`. Note `'UN'` means "unknown"|
-|`x`                   |        `float32` | x-coot given|
+|`x`                   |        `float32` | x-coordinate of pitch in old gameday system. Out-dated, do not use.|
+|`y`                   |        `float32` | y-coordinate of pitch in old gameday system. Out-dated, do not use.|
+|`px`                  |        `float32` | horizontal location of pitch as it crosses plate. Measured in feet from center of plate|
+|`pz`                  |        `float32` | vertical location of pitch as it crosses plate. Measured in feet from ground. Can be negative if ball hits ground before crossing plate.|
+|`pfx_x`               |        `float32` | the horizontal movement, in inches, of the pitch between the release point and home plate, as compared to a theoretical pitch thrown at the same speed with no spin-induced movement.|
+|`pfx_z`               |        `float32` | the vertical movement, in inches, of the pitch between the release point and home plate, as compared to a theoretical pitch thrown at the same speed with no spin-induced movement.|
+|`start_speed`         |        `float32` | the pitch speed, in miles per hour and in three dimensions, measured at the initial point, `y0`. Of the two speeds, this one is closer to the speed measured by a radar gun and what we are familiar with for a pitcher's velocity|
+|`end_speed`           |        `float32` | the pitch speed measured as it crossed the front of home plate|
+|`sz_top`              |        `float32` | the distance in feet from the ground to the top of the current batter's "rulebook" strike zone|
+|`sz_bot`              |        `float32` | the distance in feet from the ground to the bottom of the current batter's "rulebook" strike zone|
+|`x0`                  |        `float32` | the left/right distance, in feet, of the pitch, measured at the initial point.|
+|`y0`                  |        `float32` | the distance in feet from home plate where the PITCHf/x system is set to measure the initial parameters. Seems to be set at a constant 50, at least recently|
+|`z0`                  |        `float32` | the height, in feet, of the pitch, measured at the initial point.|
+|`vx0`                 |        `float32` | the x-component of velocity (ft/s) measured at initial point|
+|`vy0`                 |        `float32` | the y-component of velocity (ft/s) measured at initial point|
+|`vz0`                 |        `float32` | the z-component of velocity (ft/s) measured at initial point|
+|`ax`                  |        `float32` | the x-component of acceleration (ft/s^2) measured at initial point|
+|`ay`                  |        `float32` | the y-component of acceleration (ft/s^2) measured at initial point|
+|`az`                  |        `float32` | the z-component of acceleration (ft/s^2) measured at initial point|
+|`break_y`             |        `float32` | the distance in feet from home plate to the point in the pitch trajectory where the pitch achieved its greatest deviation from the straight line path between the release point and the front of home plate|
+|`break_angle`         |        `float32` | the angle, in degrees, from vertical to the straight line path from the release point to where the pitch crossed the front of home plate, as seen from the catcher's/umpire's perspective|
+|`break_length`        |        `float32` | the greatest distance, in inches, between the trajectory of the pitch at any point between the release point and the front of home plate, and the straight line path from the release point to the front of home plate|
+|`type_conf`           |        `float32` | the "confidence" of MLB's pitch-classification algorithm that it got `pitch_type` correct|
+|`zone`                |           `int8` | 1-9 are the 9 zones within strikezone, starting at upper left and moving left-to-right, top-to-bottom. 11 is out-of-zone upper-left, 12 is upper-right, 13 is lower-left, 14 is lower-right. Set to -1 if not given|
+|`nasty`               |          `int16` | MLB's "nastiness" rating for each pitch. Don't ask how it's calculated. Seems to be an integer between 0 and 100. Set to -1 if not given|
 |`spin_dir`            |        `float32` | ball spin direction. Need to investigate what coordinate system this is in|
 |`spin_rate`           |        `float32` | ball spin rate. Given in rpm??|
 |`hit_x`               |        `float32` | Statcast x location of hit. Note NOT the same coordinate system as for PITCHf/x. Home plate seems to be centered on something random, need to investigate|

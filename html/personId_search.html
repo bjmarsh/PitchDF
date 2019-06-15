@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* {
+  box-sizing: border-box;
+}
+
+#searchBox {
+  width: 50%;
+  min-width: 250px;
+  font-size: 16px;
+  padding: 12px 20px 12px 40px;
+  border: 1px solid #ddd;
+  margin-bottom: 12px;
+}
+
+.table_container{
+   width: 40%;
+   min-width: 300px;
+   border-style: solid;
+   border-width: 1px;
+}
+
+.scrollable_body{
+   width: 100%;
+   overflow: auto;
+   height: 250px;
+
+}
+
+.fixed_header{
+    display:table;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 18px;
+}
+
+.fixed_header thead, .fixed_header tr:hover {
+  background: #f1f1f1;
+}
+
+.fixed_header th, .fixed_header td {
+  padding: 5px;
+  text-align: left;
+  width: 33%;
+}
+
+
+</style>
+</head>
+<body>
+
+<center>
+
+<h2>Player IDs</h2>
+
+<input type="text" id="searchBox" onkeyup="filter()" placeholder="Search for names or IDs.." title="Type in a name">
+
+<div class="table_container">
+<table class="fixed_header" >
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Player ID</th>
+      <th>Position</th>
+    </tr>
+  </thead>
+</table>
+<div class="scrollable_body">
+<table class="fixed_header" id="mainTable">
+</table>
+</div>
+</div>
+
+<script>
+//first add an event listener for page load
+document.addEventListener( "DOMContentLoaded", get_json_data, false ); // get_json_data is the function name that will fire on page load
+
+function get_json_data(){
+    // Relative URL of external json file
+    var json_url = 'personIds.json';
+
+    //Build the XMLHttpRequest (aka AJAX Request)
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() { 
+        if (this.readyState == 4 && this.status == 200) {//when a good response is given do this
+
+            var data = JSON.parse(this.responseText); // convert the response to a json object
+            append_json(data);// pass the json object to the append_json function
+        }
+    }
+    //set the request destination and type
+    xmlhttp.open("POST", json_url, true);
+    //set required headers for the request
+    xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    // send the request
+    xmlhttp.send(); // when the request completes it will execute the code in onreadystatechange section
+}
+  
+//this function appends the json data to the table 'gable'
+function append_json(data){
+    var table = document.getElementById('mainTable');
+    sort_func = function(a,b){
+        stra = data[a].lastName + data[a].firstName;
+        strb = data[b].lastName + data[b].firstName;
+        return stra < strb ? -1 : stra > strb ? 1 : 0;
+    }
+    sorted_keys = Object.keys(data).sort(sort_func)
+    sorted_keys.forEach(function(k) {
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td>' + data[k].firstName + " " + data[k].lastName + '</td>' +
+                '<td>' + k + '</td>' +
+                '<td>' + data[k].position + '</td>' +
+                '</tr>';
+            table.appendChild(tr);
+        });
+    trs = table.getElementsByTagName("tr");
+    for(i=0; i < trs.length; i++){
+        trs[i].style.display = "none";
+    }
+}
+
+function filter() {
+    var input, filter, table, tr, td, i, txtValue;
+    input = document.getElementById("searchBox");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("mainTable");
+    tr = table.getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+        tds = tr[i].getElementsByTagName("td");
+        foundMatch = false;
+        for (j = 0; j < tds.length; j++){
+            td = tds[j];
+            if (td) {
+                txtValue = td.textContent || td.innerText;
+                if(txtValue.toUpperCase().indexOf(filter) > -1)
+                    foundMatch = true;
+            }
+        } 
+        if(foundMatch && filter.length >= 3)
+            tr[i].style.display = "";
+        else 
+            tr[i].style.display = "none";        
+    }
+}
+
+</script>
+
+</center>
+
+</body>
+</html>

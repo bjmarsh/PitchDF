@@ -4,10 +4,10 @@ from pitchdf.GameJSONParser import GameJSONParser
 from pitchdf.OutputROOT import OutputROOT
 from pitchdf.OutputDF import OutputDF, OutputCSV
 from pitchdf.GameState import GameState
-from pitchdf.DownloadGames import *
+# from pitchdf.DownloadGames import *
 
 
-year = 2013
+year = 2019
 
 gids = sorted([x.split("/")[-1] for x in glob.glob("/nfs-7/userdata/{0}/gamelogs/{1}/gid*".format(os.environ["USER"],year))])
 # gids = ["gid_2015_05_15_wasmlb_sdnmlb_1"]

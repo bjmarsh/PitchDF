@@ -28,7 +28,7 @@ import gzip
 from pitchdf.GameJSONParser import GameJSONParser
 from pitchdf.OutputDF import OutputDF
 
-output = OutputDF("output_dfs/pitches.pkl".format(year))
+output = OutputDF("output_dfs/pitches.pkl")
 parser = GameJSONParser(output)
 
 # let's say we have a collection of gzipped game jsons (downloaded using examples above)

@@ -155,11 +155,12 @@ class GameJSONParser:
                 self.game_state.third = -1
                 self.game_state.base_state = 0
                 self.game_state.o = 0
-                self.game_state.away_score_afterInn = \
-                    self.inning_scores[(self.game_state.half,self.game_state.inning)][0]
-                self.game_state.home_score_afterInn = \
-                    self.inning_scores[(self.game_state.half,self.game_state.inning)][1]
                 self.runner_dict = {}
+
+            self.game_state.away_score_afterInn = \
+                self.inning_scores[(self.game_state.half,self.game_state.inning)][0]
+            self.game_state.home_score_afterInn = \
+                self.inning_scores[(self.game_state.half,self.game_state.inning)][1]
                 
             self.game_state.b = 0
             self.game_state.s = 0
@@ -335,6 +336,7 @@ class GameJSONParser:
             if "home" in inn and "runs" in inn["home"]:
                 ch += inn["home"]["runs"]
             self.inning_scores[("bottom",inn["num"])] = (ca,ch)
+        print self.inning_scores
 
         # loop over all plays
         for play in ld["plays"]["allPlays"]:
@@ -350,7 +352,8 @@ if __name__=="__main__":
     # output = OutputCSV("pitches_test.csv")
     # output = OutputROOT("pitches_test.root")
     parser = GameJSONParser(output)
-    pks = get_gamePks(dt.date(2019,06,11),dt.date(2019,06,12),teamId=112)
+    # pks = get_gamePks(dt.date(2019,06,11),dt.date(2019,06,12),teamId=112)
+    pks = [491288]    
     for pk in pks:
         d = download_single_game(pk)
         if d:

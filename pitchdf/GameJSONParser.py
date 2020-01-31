@@ -228,7 +228,11 @@ class GameJSONParser:
                             if "pinch-runner" in event["details"]["description"].lower():
                                 pr_name = event["details"]["description"].split("replaces ")[-1].replace(".","").replace(" ","") \
                                             .replace("CCron","CJCron").replace("JHardy","JJHardy").replace("APollock","AJPollock") \
-                                            .replace("AEllis","AJEllis").replace("JMartinez","JDMartinez")
+                                            .replace("AEllis","AJEllis").replace("JMartinez","JDMartinez") \
+                                            .replace("NickCastellanos","NicholasCastellanos").replace("NoriAoki","NorichikaAoki") \
+                                            .replace("JArencibia","JPArencibia").replace("CarlosSanchez","YolmerSanchez") \
+                                            .replace("RickieWeeks","RickieWeeksJr").replace("GiovannyUrshela","GioUrshela") \
+                                            .replace("IvanDeJesus","IvanDeJesusJr")
                                 if pr_name not in self.runner_dict:
                                     raise Exception("Pinch-runner replacing {0}, who doesn't appear to be on the bases".format(pr_name))
                                 pid = self.runner_dict[pr_name]
@@ -263,8 +267,25 @@ class GameJSONParser:
                     if rid in isout or (end in ["1B","2B","3B"] and getattr(self.game_state, self.base_map[end]) == rid):
                         to_do = to_do[1:]
                         continue
+                    if start is None and end is None and runners[idx]["movement"]["isOut"]:
+                        for bshort, blong in self.base_map.items():
+                            if getattr(self.game_state, blong) == rid:
+                                start = bshort
+                                runners[idx]["movement"]["start"] = bshort
+                                break
+                        
 
-                    # if self.game_state.gid == "2017/07/18/tormlb-bosmlb-1":
+                    # I see no resort other than to just hard code it to skip some particularly buggy ones...
+                    if (self.game_state.gamePk,self.game_state.inning, self.game_state.half, rid, runners[idx]["details"]["event"]) in \
+                       [(380974,12,"bottom",407893,"Defensive Indiff"),
+                        (413681,2,"bottom",624577,"Runner Out"),
+                        (413681,2,"bottom",624577,"Forceout"),
+                        (415742,2,"top",461865,"Double Play"),
+                       ]:
+                        to_do = to_do[1:]
+                        continue
+
+                    # if self.game_state.gid == "2015/06/09/houmlb-chamlb-1" and self.game_state.inning==7 and self.game_state.half=="bottom":
                     #     print self.game_state.half, self.game_state.inning, self.game_state.o, rid, start, end, self.game_state.first, self.game_state.second, self.game_state.third
                     #     raw_input()
 

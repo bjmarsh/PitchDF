@@ -9,13 +9,16 @@ from DownloadGames import *
 
 class GameJSONParser:
     ignore_actions = ("Passed Ball", "Wild Pitch", "Caught Stealing 2B",
-                      "Caught Stealing 3B", "Offensive Substitution", "Defensive Switch", 
+                      "Caught Stealing 3B", "Defensive Switch", 
                       "Game Advisory","Stolen Base 2B", "Stolen Base 3B", "Defensive Sub",
                       "Injury", "Runner Out", "Pickoff Error 1B", "Balk", "Pitch Challenge",
                       "Pickoff 1B", "Ejection", "Defensive Indiff", "Stolen Base Home",
                       "Pickoff Error 2B", "Other Advance", "Pickoff Caught Stealing 2B",
                       "Pickoff 2B", "Caught Stealing Home","Error", "Pickoff Caught Stealing Home",
                       "Pickoff 3B", "Pickoff Caught Stealing 3B", "Pickoff Error 3B")
+
+    base_map = {'1B':'first', '2B':'second', '3B':'third'}
+    runner_dict = {}
 
     def __init__(self, outputter):
         self.game_state = GameState()
@@ -34,12 +37,10 @@ class GameJSONParser:
         isScore = (end == "score")
         isOut = runner["movement"]["isOut"]
         
-        base_map = {'1B':'first', '2B':'second', '3B':'third'}
-
-        if start not in [None,"4B"] and getattr(self.game_state, base_map[start]) == pid:
-            setattr(self.game_state,base_map[start], -1)
+        if start not in [None,"4B"] and getattr(self.game_state, self.base_map[start]) == pid:
+            setattr(self.game_state, self.base_map[start], -1)
         if end is not None and end not in ["score","4B"]:
-            setattr(self.game_state,base_map[end], pid)
+            setattr(self.game_state, self.base_map[end], pid)
 
         if isScore and self.game_state.home_score > -1:
             if self.game_state.half == "top":
@@ -58,6 +59,7 @@ class GameJSONParser:
         if isOut:
             self.game_state.o += 1
     
+        self.runner_dict[runner["details"]["runner"]["fullName"].replace(".","").replace(" ","")] = pid
 
 
     def process_pitch(self, pitch):
@@ -157,7 +159,7 @@ class GameJSONParser:
                     self.inning_scores[(self.game_state.half,self.game_state.inning)][0]
                 self.game_state.home_score_afterInn = \
                     self.inning_scores[(self.game_state.half,self.game_state.inning)][1]
-                                                                          
+                self.runner_dict = {}
                 
             self.game_state.b = 0
             self.game_state.s = 0
@@ -194,6 +196,10 @@ class GameJSONParser:
             events.append([None, []])
             # now insert the runner events at the appropriate spot
             for runner in atbat["runners"]:
+                if runner["movement"]["start"] is None and runner["movement"]["end"] is None and runner["movement"]["isOut"] is None:
+                    continue
+                if runner["movement"]["start"] is not None and runner["movement"]["start"] == runner["movement"]["end"]:
+                    continue
                 idx = runner["details"]["playIndex"]
                 events[idx][1].append(runner)
 
@@ -217,6 +223,18 @@ class GameJSONParser:
                                 self.game_state.PH = "L"
                             if "right-handed" in event["details"]["description"]:
                                 self.game_state.PH = "R"
+                        elif evttype == "Offensive Substitution":
+                            if "pinch-runner" in event["details"]["description"].lower():
+                                pr_name = event["details"]["description"].split("replaces ")[-1].replace(".","").replace(" ","") \
+                                            .replace("CCron","CJCron").replace("JHardy","JJHardy").replace("APollock","AJPollock") \
+                                            .replace("AEllis","AJEllis").replace("JMartinez","JDMartinez")
+                                if pr_name not in self.runner_dict:
+                                    raise Exception("Pinch-runner replacing {0}, who doesn't appear to be on the bases".format(pr_name))
+                                pid = self.runner_dict[pr_name]
+                                for b in ["first","second","third"]:
+                                    if getattr(self.game_state, b) == pid:
+                                        setattr(self.game_state, b,  event["player"]["id"])
+
                         elif evttype in self.ignore_actions:
                             pass
                         else:
@@ -224,8 +242,52 @@ class GameJSONParser:
                     elif event["type"] not in ["pickoff"]:
                         raise Exception("Unknown event type "+event["type"])
 
-                for runner in runners:
-                    self.process_runner(runner)
+                # holy shit the runner data is a mess
+                # out of order, duplicate entries, entries for a runner going from 3B to 3B, etc....
+                # a bunch of ad-hoc fixes here to make sure we get it right (only 75% sure that it's doing the right thing...)
+                runners = sorted(runners, key=lambda x:x["movement"]["isOut"], reverse=True)
+                to_do = list(range(len(runners)))
+                isout = []
+                while len(to_do)>0:
+                    idx = to_do[0]
+                    rid = runners[idx]["details"]["runner"]["id"]
+                    if runners[idx]["movement"]["start"] == "4B":
+                        runners[idx]["movement"]["start"] = "3B"
+                    if runners[idx]["movement"]["isOut"]:
+                        runners[idx]["movement"]["end"] = None
+                    if runners[idx]["details"]["isScoringEvent"] and runners[idx]["movement"]["end"] == "4B":
+                        runners[idx]["movement"]["end"] = "score"
+                    start = runners[idx]["movement"]["start"]
+                    end = runners[idx]["movement"]["end"]
+                    if rid in isout or (end in ["1B","2B","3B"] and getattr(self.game_state, self.base_map[end]) == rid):
+                        to_do = to_do[1:]
+                        continue
+
+                    # if self.game_state.gid == "2017/07/18/tormlb-bosmlb-1":
+                    #     print self.game_state.half, self.game_state.inning, self.game_state.o, rid, start, end, self.game_state.first, self.game_state.second, self.game_state.third
+                    #     raw_input()
+
+                    # buggy thing where a runner on 2B has an entry for 3B to score, with no entry for 2B to 3B
+                    if len(to_do)==1 and end=='score' and start is not None and getattr(self.game_state, self.base_map[start]) != rid:
+                        for b in ['first', 'second', 'third']:
+                            if getattr(self.game_state, b) == rid:                                        
+                                setattr(self.game_state, b, -1)
+                        setattr(self.game_state, self.base_map[start], rid)
+
+                    # make sure start is None (i.e. it's the batter), or the runner is already at start
+                    if (start is None or \
+                        getattr(self.game_state, self.base_map[start]) == rid) and \
+                       (end in [None, 'score'] or self.game_state.o==3 or getattr(self.game_state, self.base_map[end]) == -1):
+                        self.process_runner(runners[idx])
+                        to_do = to_do[1:]
+                        if end is None or end is 'score':
+                            isout.append(rid)
+                    else:
+                        if len(to_do)==1:
+                            print self.game_state.half, self.game_state.inning, self.game_state.o, rid, start, end, self.game_state.first, self.game_state.second, self.game_state.third
+                            raise Exception("Shouldn't get here, we've reached an infinite loop! See above for state")
+                        else:
+                            to_do = to_do[1:] + to_do[:1]
 
             if self.game_state.home_score_afterAB != self.game_state.home_score:
                 print self.game_state

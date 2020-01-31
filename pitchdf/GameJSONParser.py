@@ -336,7 +336,6 @@ class GameJSONParser:
             if "home" in inn and "runs" in inn["home"]:
                 ch += inn["home"]["runs"]
             self.inning_scores[("bottom",inn["num"])] = (ca,ch)
-        print self.inning_scores
 
         # loop over all plays
         for play in ld["plays"]["allPlays"]:

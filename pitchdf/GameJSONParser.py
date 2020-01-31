@@ -146,179 +146,222 @@ class GameJSONParser:
 
 
     def process_atbat(self, atbat):
-            self.game_state.inning = atbat["about"]["inning"]
-            # if the half-inning changes, reset the runners and outs
-            if self.game_state.half != atbat["about"]["halfInning"]:
-                self.game_state.half = atbat["about"]["halfInning"]
-                self.game_state.first = -1
-                self.game_state.second = -1
-                self.game_state.third = -1
-                self.game_state.base_state = 0
-                self.game_state.o = 0
-                self.runner_dict = {}
+        gs = self.game_state
 
-            self.game_state.away_score_afterInn = \
-                self.inning_scores[(self.game_state.half,self.game_state.inning)][0]
-            self.game_state.home_score_afterInn = \
-                self.inning_scores[(self.game_state.half,self.game_state.inning)][1]
-                
-            self.game_state.b = 0
-            self.game_state.s = 0
-            self.game_state.batter = atbat["matchup"]["batter"]["id"]
-            self.game_state.pitcher= atbat["matchup"]["pitcher"]["id"]
-            self.game_state.BH = atbat["matchup"]["batSide"]["code"]
-            self.game_state.PH = atbat["matchup"]["pitchHand"]["code"]
+        gs.inning = atbat["about"]["inning"]
+        # if the half-inning changes, reset the runners and outs
+        if gs.half != atbat["about"]["halfInning"]:
+            gs.half = atbat["about"]["halfInning"]
+            gs.first = -1
+            gs.second = -1
+            gs.third = -1
+            gs.base_state = 0
+            gs.o = 0
+            self.runner_dict = {}
 
-            self.game_state.home_score_afterAB = atbat["result"]["homeScore"]
-            self.game_state.away_score_afterAB = atbat["result"]["awayScore"]
+        gs.away_score_afterInn = \
+            self.inning_scores[(gs.half,gs.inning)][0]
+        gs.home_score_afterInn = \
+            self.inning_scores[(gs.half,gs.inning)][1]
+            
+        gs.b = 0
+        gs.s = 0
+        gs.batter = atbat["matchup"]["batter"]["id"]
+        gs.pitcher= atbat["matchup"]["pitcher"]["id"]
+        gs.BH = atbat["matchup"]["batSide"]["code"]
+        gs.PH = atbat["matchup"]["pitchHand"]["code"]
 
-            # get event type, check if it's the first time we've seen it
-            if "event" not in atbat["result"]:
-                # a couple of randomly empty at-bats?
-                if len(atbat["playEvents"]) == 0:
-                    return
-                else:
-                    raise Exception("Faulty at-bat! gid: {0}, startTime: {1}".format(self.game_state.gid, atbat["about"]["startTime"]))
-            self.game_state.event = atbat["result"]["event"]
-            if self.game_state.event not in self.unique_events:
-                #print "{0:25s}:{1}".format(self.game_state.event, self.game_state.gid)
-                self.unique_events.append(self.game_state.event)
+        gs.home_score_afterAB = atbat["result"]["homeScore"]
+        gs.away_score_afterAB = atbat["result"]["awayScore"]
 
-            if self.game_state.pitcher not in self.game_state.pitch_counts:
-                self.game_state.pitch_counts[self.game_state.pitcher] = 0
+        # get event type, check if it's the first time we've seen it
+        if "event" not in atbat["result"]:
+            # a couple of randomly empty at-bats?
+            if len(atbat["playEvents"]) == 0:
+                return
+            else:
+                raise Exception("Faulty at-bat! gid: {0}, startTime: {1}".format(gs.gid, atbat["about"]["startTime"]))
+        gs.event = atbat["result"]["event"]
+        if gs.event not in self.unique_events:
+            #print "{0:25s}:{1}".format(gs.event, gs.gid)
+            self.unique_events.append(gs.event)
 
-            # each at-bat consists of a series of "events". Each event can be a "pitch" or an
-            # "action" (e.g. stolen base).
-            # "runners" can be concurrent with each event. Store as [event, [runners1,...]]
-            events = []
-            for event in atbat["playEvents"]:
-                events.append([event, []])
-            # for the "after at-bat", there can be runners but no official "event"
-            events.append([None, []])
-            # now insert the runner events at the appropriate spot
-            for runner in atbat["runners"]:
-                if runner["movement"]["start"] is None and runner["movement"]["end"] is None and runner["movement"]["isOut"] is None:
-                    continue
-                if runner["movement"]["start"] is not None and runner["movement"]["start"] == runner["movement"]["end"]:
-                    continue
-                idx = runner["details"]["playIndex"]
-                events[idx][1].append(runner)
+        if gs.pitcher not in gs.pitch_counts:
+            gs.pitch_counts[gs.pitcher] = 0
 
-            for event,runners in events:
-                if event is not None:
-                    if event["type"] == "pitch":
-                        self.process_pitch(event)
+        # each at-bat consists of a series of "events". Each event can be a "pitch" or an
+        # "action" (e.g. stolen base).
+        # "runners" can be concurrent with each event. Store as [event, [runners1,...]]
+        events = []
+        for event in atbat["playEvents"]:
+            events.append([event, []])
+        # for the "after at-bat", there can be runners but no official "event"
+        events.append([None, []])
+        # now insert the runner events at the appropriate spot
+        for runner in atbat["runners"]:
+            if runner["movement"]["start"] is None and runner["movement"]["end"] is None and runner["movement"]["isOut"] is None:
+                continue
+            if runner["movement"]["start"] is not None and runner["movement"]["start"] == runner["movement"]["end"]:
+                continue
+            idx = runner["details"]["playIndex"]
+            events[idx][1].append(runner)
+
+        for event,runners in events:
+            if event is not None:
+                if event["type"] == "pitch":
+                    self.process_pitch(event)
+                    pass
+                elif event["type"] == "action":
+                    evttype = event["details"]["event"]
+                    if evttype == "Pitching Substitution":
+                        gs.pitcher = event["player"]["id"]
+                        if gs.pitcher not in gs.pitch_counts:
+                            gs.pitch_counts[gs.pitcher] = 0
+                    elif evttype == "Umpire Substitution":
+                        des = event["details"]["description"]
+                        if "HP" in des or "home plate" in des.lower():
+                            gs.umpire = event["umpire"]["id"]
+                    elif evttype == "Pitcher Switch":
+                        if "left-handed" in event["details"]["description"]:
+                            gs.PH = "L"
+                        if "right-handed" in event["details"]["description"]:
+                            gs.PH = "R"
+                    elif evttype == "Offensive Substitution":
+                        if "pinch-runner" in event["details"]["description"].lower():
+                            r_name = event["details"]["description"].split("replaces ")[-1].replace(".","").replace(" ","") \
+                                        .replace("CCron","CJCron").replace("JHardy","JJHardy").replace("APollock","AJPollock") \
+                                        .replace("AEllis","AJEllis").replace("JMartinez","JDMartinez") \
+                                        .replace("NickCastellanos","NicholasCastellanos").replace("NoriAoki","NorichikaAoki") \
+                                        .replace("JArencibia","JPArencibia").replace("CarlosSanchez","YolmerSanchez") \
+                                        .replace("RickieWeeks","RickieWeeksJr").replace("GiovannyUrshela","GioUrshela") \
+                                        .replace("IvanDeJesus","IvanDeJesusJr").replace("APierzynski","AJPierzynski") \
+                                        .replace("AReed","AJReed").replace("YulieskiGurriel","YuliGurriel") \
+                                        .replace("RonaldAcuna","RonaldAcunaJr").replace("JoseFernandez","JoseMiguelFernandez") \
+                                        .replace("AlbertAlmora","AlbertAlmoraJr").replace("VladimirGuerrero","VladimirGuerreroJr") \
+                                        .replace("LaMonteWade","LaMonteWadeJr") \
+                                        .replace("JrJr","Jr")
+                            if r_name not in self.runner_dict:
+                                raise Exception("Pinch-runner replacing {0}, who doesn't appear to be on the bases".format(r_name))
+                            pid = self.runner_dict[r_name]
+                            for b in ["first","second","third"]:
+                                if getattr(gs, b) == pid:
+                                    setattr(gs, b,  event["player"]["id"])
+                            pr_name = event["details"]["description"].split(" replaces")[0].split("-runner ")[-1].replace(".","").replace(" ","")
+                            self.runner_dict[pr_name] = event["player"]["id"]
+
+                    elif evttype in self.ignore_actions:
                         pass
-                    elif event["type"] == "action":
-                        evttype = event["details"]["event"]
-                        if evttype == "Pitching Substitution":
-                            self.game_state.pitcher = event["player"]["id"]
-                            if self.game_state.pitcher not in self.game_state.pitch_counts:
-                                self.game_state.pitch_counts[self.game_state.pitcher] = 0
-                        elif evttype == "Umpire Substitution":
-                            des = event["details"]["description"]
-                            if "HP" in des or "home plate" in des.lower():
-                                self.game_state.umpire = event["umpire"]["id"]
-                        elif evttype == "Pitcher Switch":
-                            if "left-handed" in event["details"]["description"]:
-                                self.game_state.PH = "L"
-                            if "right-handed" in event["details"]["description"]:
-                                self.game_state.PH = "R"
-                        elif evttype == "Offensive Substitution":
-                            if "pinch-runner" in event["details"]["description"].lower():
-                                pr_name = event["details"]["description"].split("replaces ")[-1].replace(".","").replace(" ","") \
-                                            .replace("CCron","CJCron").replace("JHardy","JJHardy").replace("APollock","AJPollock") \
-                                            .replace("AEllis","AJEllis").replace("JMartinez","JDMartinez") \
-                                            .replace("NickCastellanos","NicholasCastellanos").replace("NoriAoki","NorichikaAoki") \
-                                            .replace("JArencibia","JPArencibia").replace("CarlosSanchez","YolmerSanchez") \
-                                            .replace("RickieWeeks","RickieWeeksJr").replace("GiovannyUrshela","GioUrshela") \
-                                            .replace("IvanDeJesus","IvanDeJesusJr")
-                                if pr_name not in self.runner_dict:
-                                    raise Exception("Pinch-runner replacing {0}, who doesn't appear to be on the bases".format(pr_name))
-                                pid = self.runner_dict[pr_name]
-                                for b in ["first","second","third"]:
-                                    if getattr(self.game_state, b) == pid:
-                                        setattr(self.game_state, b,  event["player"]["id"])
-
-                        elif evttype in self.ignore_actions:
-                            pass
-                        else:
-                            raise Exception("Unknown action: "+evttype)
-                    elif event["type"] not in ["pickoff"]:
-                        raise Exception("Unknown event type "+event["type"])
-
-                # holy shit the runner data is a mess
-                # out of order, duplicate entries, entries for a runner going from 3B to 3B, etc....
-                # a bunch of ad-hoc fixes here to make sure we get it right (only 75% sure that it's doing the right thing...)
-                runners = sorted(runners, key=lambda x:x["movement"]["isOut"], reverse=True)
-                to_do = list(range(len(runners)))
-                isout = []
-                while len(to_do)>0:
-                    idx = to_do[0]
-                    rid = runners[idx]["details"]["runner"]["id"]
-                    if runners[idx]["movement"]["start"] == "4B":
-                        runners[idx]["movement"]["start"] = "3B"
-                    if runners[idx]["movement"]["isOut"]:
-                        runners[idx]["movement"]["end"] = None
-                    if runners[idx]["details"]["isScoringEvent"] and runners[idx]["movement"]["end"] == "4B":
-                        runners[idx]["movement"]["end"] = "score"
-                    start = runners[idx]["movement"]["start"]
-                    end = runners[idx]["movement"]["end"]
-                    if rid in isout or (end in ["1B","2B","3B"] and getattr(self.game_state, self.base_map[end]) == rid):
-                        to_do = to_do[1:]
-                        continue
-                    if start is None and end is None and runners[idx]["movement"]["isOut"]:
-                        for bshort, blong in self.base_map.items():
-                            if getattr(self.game_state, blong) == rid:
-                                start = bshort
-                                runners[idx]["movement"]["start"] = bshort
-                                break
-                        
-
-                    # I see no resort other than to just hard code it to skip some particularly buggy ones...
-                    if (self.game_state.gamePk,self.game_state.inning, self.game_state.half, rid, runners[idx]["details"]["event"]) in \
-                       [(380974,12,"bottom",407893,"Defensive Indiff"),
-                        (413681,2,"bottom",624577,"Runner Out"),
-                        (413681,2,"bottom",624577,"Forceout"),
-                        (415742,2,"top",461865,"Double Play"),
-                       ]:
-                        to_do = to_do[1:]
-                        continue
-
-                    # if self.game_state.gid == "2015/06/09/houmlb-chamlb-1" and self.game_state.inning==7 and self.game_state.half=="bottom":
-                    #     print self.game_state.half, self.game_state.inning, self.game_state.o, rid, start, end, self.game_state.first, self.game_state.second, self.game_state.third
-                    #     raw_input()
-
-                    # buggy thing where a runner on 2B has an entry for 3B to score, with no entry for 2B to 3B
-                    if len(to_do)==1 and end=='score' and start is not None and getattr(self.game_state, self.base_map[start]) != rid:
-                        for b in ['first', 'second', 'third']:
-                            if getattr(self.game_state, b) == rid:                                        
-                                setattr(self.game_state, b, -1)
-                        setattr(self.game_state, self.base_map[start], rid)
-
-                    # make sure start is None (i.e. it's the batter), or the runner is already at start
-                    if (start is None or \
-                        getattr(self.game_state, self.base_map[start]) == rid) and \
-                       (end in [None, 'score'] or self.game_state.o==3 or getattr(self.game_state, self.base_map[end]) == -1):
-                        self.process_runner(runners[idx])
-                        to_do = to_do[1:]
-                        if end is None or end is 'score':
-                            isout.append(rid)
                     else:
-                        if len(to_do)==1:
-                            print self.game_state.half, self.game_state.inning, self.game_state.o, rid, start, end, self.game_state.first, self.game_state.second, self.game_state.third
-                            raise Exception("Shouldn't get here, we've reached an infinite loop! See above for state")
-                        else:
-                            to_do = to_do[1:] + to_do[:1]
+                        raise Exception("Unknown action: "+evttype)
+                elif event["type"] not in ["pickoff"]:
+                    raise Exception("Unknown event type "+event["type"])
 
-            if self.game_state.home_score_afterAB != self.game_state.home_score:
-                print self.game_state
-                raise Exception("Home score mismatch!")
-            if self.game_state.away_score_afterAB != self.game_state.away_score:
-                print self.game_state
-                raise Exception("Away score mismatch!")
+            # holy shit the runner data is a mess
+            # out of order, duplicate entries, entries for a runner going from 3B to 3B, etc....
+            # a bunch of ad-hoc fixes here to make sure we get it right (only 75% sure that it's doing the right thing...)
+            runners = sorted(runners, key=lambda x:x["movement"]["isOut"], reverse=True)
+            to_do = list(range(len(runners)))
+            isout = []
+            while len(to_do)>0:
+                idx = to_do[0]
+                rid = runners[idx]["details"]["runner"]["id"]
+                if runners[idx]["movement"]["start"] == "4B":
+                    runners[idx]["movement"]["start"] = "3B"
+                if runners[idx]["movement"]["isOut"]:
+                    runners[idx]["movement"]["end"] = None
+                if runners[idx]["details"]["isScoringEvent"] and runners[idx]["movement"]["end"] == "4B":
+                    runners[idx]["movement"]["end"] = "score"
+                # now very specific custom overrides for buggy data
+                if gs.gamePk==447927 and rid==514888 and gs.inning==9 and gs.half=="bottom" and runners[idx]["movement"]["end"] == "2B":
+                    runners[idx]["movement"]["end"] = "3B"
+                if gs.gamePk==448903 and rid==592450 and gs.inning==6 and gs.half=="top" and runners[idx]["movement"]["start"] == "2B":
+                    runners[idx]["movement"]["start"] = "1B"
+                if gs.gamePk==531490 and rid==607208 and gs.inning==1 and gs.half=="bottom" and runners[idx]["movement"]["start"] == "2B":
+                    runners[idx]["movement"]["start"] = "1B"
+                if gs.gamePk==531651 and rid==624577 and gs.inning==1 and gs.half=="bottom" and runners[idx]["movement"]["start"] == "3B":
+                    runners[idx]["movement"]["start"] = "1B"
+                if gs.gamePk==565928 and rid==502481 and gs.inning==7 and gs.half=="top" and runners[idx]["movement"]["start"] is None:
+                    runners[idx]["movement"]["end"] = None
+                    runners[idx]["movement"]["isOut"] = True
+                if gs.gamePk==565932 and rid==665742 and gs.inning==1 and gs.half=="bottom" and runners[idx]["movement"]["start"] == "1B":
+                    runners[idx]["movement"]["start"] = "2B"
+                if gs.gamePk==566213 and rid==516782 and gs.inning==1 and gs.half=="bottom" and runners[idx]["movement"]["start"] == "1B":
+                    runners[idx]["movement"]["start"] = "2B"
+                if gs.gamePk==566702 and rid==596059 and gs.inning==6 and gs.half=="top" and runners[idx]["movement"]["start"] == "1B":
+                    runners[idx]["movement"]["start"] = "3B"
+                if gs.gamePk==567416 and rid==623912 and gs.inning==4 and gs.half=="bottom" and runners[idx]["movement"]["start"] == "3B":
+                    runners[idx]["movement"]["start"] = "2B"
+                if gs.gamePk==566630 and rid==657557 and gs.inning==5 and gs.half=="bottom" and runners[idx]["movement"]["isOut"] == True:
+                    to_do = to_do[1:]
+                    continue
+                if gs.gamePk==566155 and rid==595777 and gs.inning==4 and gs.half=="bottom" and runners[idx]["movement"]["start"] == "2B":
+                    runners[idx]["movement"]["start"] = "1B"
+                if gs.gamePk==567432 and rid==656371 and gs.inning==4 and gs.half=="bottom" and runners[idx]["movement"]["start"] is None:
+                    runners[idx]["movement"]["end"] = "1B"
+                if gs.gamePk==565003 and rid==596105 and gs.inning==2 and gs.half=="bottom" and runners[idx]["movement"]["start"] == "1B":
+                    runners[idx]["movement"]["start"] = "2B"
+                if gs.gamePk==599336 and rid==665742 and gs.inning==8 and gs.half=="bottom" and runners[idx]["movement"]["start"] == "2B":
+                    runners[idx]["movement"]["start"] = "1B"
+                
 
-            self.game_state.o = atbat["count"]["outs"]
+                start = runners[idx]["movement"]["start"]
+                end = runners[idx]["movement"]["end"]
+                if rid in isout or (end in ["1B","2B","3B"] and getattr(gs, self.base_map[end]) == rid):
+                    to_do = to_do[1:]
+                    continue
+                if start is None and end is None and runners[idx]["movement"]["isOut"]:
+                    for bshort, blong in self.base_map.items():
+                        if getattr(gs, blong) == rid:
+                            start = bshort
+                            runners[idx]["movement"]["start"] = bshort
+                            break
+                    
+
+                # I see no resort other than to just hard code it to skip some particularly buggy ones...
+                if (gs.gamePk,gs.inning, gs.half, rid, runners[idx]["details"]["event"]) in \
+                   [(380974,12,"bottom",407893,"Defensive Indiff"),
+                    (413681,2,"bottom",624577,"Runner Out"),
+                    (413681,2,"bottom",624577,"Forceout"),
+                    (415742,2,"top",461865,"Double Play"),
+                    (447076,7,"bottom",572863,"Runner Out"),
+                   ]:
+                    to_do = to_do[1:]
+                    continue
+
+                # if gs.gid == "2019/09/05/anamlb-oakmlb-1":# and gs.inning==7 and gs.half=="bottom":
+                #     print gs.half, gs.inning, gs.o, rid, start, end, gs.first, gs.second, gs.third
+                #     raw_input()
+
+                # buggy thing where a runner on 2B has an entry for 3B to score, with no entry for 2B to 3B
+                if len(to_do)==1 and end=='score' and start is not None and getattr(gs, self.base_map[start]) != rid:
+                    for b in ['first', 'second', 'third']:
+                        if getattr(gs, b) == rid:                                        
+                            setattr(gs, b, -1)
+                    setattr(gs, self.base_map[start], rid)
+
+                # make sure start is None (i.e. it's the batter), or the runner is already at start
+                if (start is None or \
+                    getattr(gs, self.base_map[start]) == rid) and \
+                   (end in [None, 'score'] or gs.o==3 or getattr(gs, self.base_map[end]) == -1):
+                    self.process_runner(runners[idx])
+                    to_do = to_do[1:]
+                    if end is None or end is 'score':
+                        isout.append(rid)
+                else:
+                    if len(to_do)==1:
+                        print gs.half, gs.inning, gs.o, rid, start, end, gs.first, gs.second, gs.third
+                        raise Exception("Shouldn't get here, we've reached an infinite loop! See above for state")
+                    else:
+                        to_do = to_do[1:] + to_do[:1]
+
+        if gs.home_score_afterAB != gs.home_score:
+            print gs
+            raise Exception("Home score mismatch!")
+        if gs.away_score_afterAB != gs.away_score:
+            print gs
+            raise Exception("Away score mismatch!")
+
+        gs.o = atbat["count"]["outs"]
 
 
     def parse_game(self, gd):
@@ -330,7 +373,10 @@ class GameJSONParser:
         # get some auxiliary info about game
         self.game_state.gid = g["game"]["id"]
         self.game_state.gamePk = g["game"]["pk"]
-        date = dt.datetime.strptime(g["datetime"]["dateTime"].split("T")[0],"%Y-%m-%d")
+        date = dt.datetime.strptime(g["datetime"]["dateTime"],"%Y-%m-%dT%H:%M:%SZ")
+        if date.hour <= 5:
+            date -= dt.timedelta(1)
+        date = date.date()
         hour = int(g["datetime"]["time"].split(":")[0])
         if g["datetime"]["ampm"] == "PM" and hour != 12:
             hour += 12

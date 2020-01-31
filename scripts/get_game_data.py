@@ -7,10 +7,10 @@ from pitchdf.GameState import GameState
 # from pitchdf.DownloadGames import *
 
 
-year = 2019
+year = 2018
 
 gids = sorted([x.split("/")[-1] for x in glob.glob("/nfs-7/userdata/{0}/gamelogs/{1}/gid*".format(os.environ["USER"],year))])
-# gids = ["gid_2015_05_15_wasmlb_sdnmlb_1"]
+# gids = ["gid_2017_06_29_nyamlb_chamlb_1"]
 
 # output = OutputROOT("../output_fromJSON/pitches_{0}.root".format(year))
 output = OutputDF("../output_fromJSON/pitches_{0}.pkl".format(year))
@@ -18,6 +18,8 @@ parser = GameJSONParser(output)
 
 indir = "/nfs-7/userdata/{0}/gamelogs/{1}".format(os.environ["USER"],year)
 for gid in gids:
+    # if "2019_1" not in gid:
+    #     continue
     fname = os.path.join(indir,gid,"livefeed.json.gz")
     if not os.path.exists(fname):
         print "ERROR: gid {0} does not exist. Skipping.".format(gid)

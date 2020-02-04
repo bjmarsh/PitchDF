@@ -15,6 +15,8 @@ Some definitions of PITCHf/x fields taken from Mike Fast's post [here](https://f
 |`home_team`           |       `category` | 3-letter identifier for home team (see above)|
 |`inning`              |          `uint8` | inning number|
 |`half`                |       `category` | `"top"` or `"bottom"`|
+|`abidx`               |          `uint8` | index of at-bat within game (starting at 0) |
+|`pitchidx`            |          `uint8` | index of pitch within at-bat (starting at 0) |
 |`balls`               |          `uint8` | number of balls before current pitch|
 |`strikes`             |          `uint8` | number of strikes before current pitch|
 |`outs`                |          `uint8` | number of outs before current pitch|

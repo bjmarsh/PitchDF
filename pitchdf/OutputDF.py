@@ -13,6 +13,8 @@ class OutputDF(Output):
         ("home_team",   "category"),
         ("inning",      "uint8"),
         ("half",        "category"),
+        ("abidx",       "uint8"),
+        ("pitchidx",    "uint8"),
         ("balls",       "uint8"),
         ("strikes",     "uint8"),
         ("outs",        "uint8"),
@@ -87,6 +89,8 @@ class OutputDF(Output):
         self._data["home_team"] +=   [game_state.home_team]
         self._data["inning"] +=      [game_state.inning]
         self._data["half"] +=        [game_state.half]
+        self._data["abidx"] +=       [game_state.abidx]
+        self._data["pitchidx"] +=    [pitch.pitchidx]
         self._data["balls"] +=       [game_state.b]
         self._data["strikes"] +=     [game_state.s]
         self._data["outs"] +=        [game_state.o]

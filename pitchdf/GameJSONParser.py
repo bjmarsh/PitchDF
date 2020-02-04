@@ -67,6 +67,7 @@ class GameJSONParser:
             pass
         pinfo = PitchInfo()
 
+        pinfo.pitchidx = pitch["pitchNumber"]
         pinfo.des = pitch["details"]["description"]
         pinfo.type = pitch["details"]["call"]["code"]
         if "type" in pitch["details"]:
@@ -163,7 +164,8 @@ class GameJSONParser:
             self.inning_scores[(gs.half,gs.inning)][0]
         gs.home_score_afterInn = \
             self.inning_scores[(gs.half,gs.inning)][1]
-            
+
+        gs.abidx = atbat["atBatIndex"]
         gs.b = 0
         gs.s = 0
         gs.batter = atbat["matchup"]["batter"]["id"]

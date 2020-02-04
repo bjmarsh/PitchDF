@@ -14,12 +14,14 @@ class OutputROOT(Output):
         self._hour = np.zeros(1, dtype=int)
         self._minute = np.zeros(1, dtype=int)
         self._DH = np.zeros(1, dtype=int)
-        self._inning  = np.zeros(1, dtype=int)
-        self._batter  = np.zeros(1, dtype=int)
-        self._pitcher = np.zeros(1, dtype=int)
-        self._balls   = np.zeros(1, dtype=int)
-        self._strikes = np.zeros(1, dtype=int)
-        self._outs    = np.zeros(1, dtype=int)
+        self._inning   = np.zeros(1, dtype=int)
+        self._batter   = np.zeros(1, dtype=int)
+        self._pitcher  = np.zeros(1, dtype=int)
+        self._abidx    = np.zeros(1, dtype=int)
+        self._pitchidx = np.zeros(1, dtype=int)
+        self._balls    = np.zeros(1, dtype=int)
+        self._strikes  = np.zeros(1, dtype=int)
+        self._outs     = np.zeros(1, dtype=int)
         self._pitch_count = np.zeros(1, dtype=int)
         self._home_score = np.zeros(1, dtype=int)
         self._away_score = np.zeros(1, dtype=int)
@@ -98,6 +100,8 @@ class OutputROOT(Output):
         self._t.Branch("inning", self._inning, 'inning/I')
         self._t.Branch("batter", self._batter, 'batter/I')
         self._t.Branch("pitcher", self._pitcher, 'pitcher/I')
+        self._t.Branch("abidx", self._abidx, 'abidx/I')
+        self._t.Branch("pitchidx", self._pitchidx, 'pitchidx/I')
         self._t.Branch("balls", self._balls, 'balls/I')
         self._t.Branch("strikes", self._strikes, 'strikes/I')
         self._t.Branch("outs", self._outs, 'outs/I')
@@ -178,6 +182,8 @@ class OutputROOT(Output):
         self._inning[0] = game_state.inning
         self._batter[0] = game_state.batter
         self._pitcher[0] = game_state.pitcher
+        self._abidx[0] = game_state.abidx
+        self._pitchidx[0] = pitch.pitchidx
         self._balls[0] = game_state.b
         self._strikes[0] = game_state.s
         self._outs[0] = game_state.o

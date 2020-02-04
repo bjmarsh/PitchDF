@@ -12,6 +12,7 @@ class GameState:
         self.away_team = ""
         self.home_team = ""
         self.DH = 1
+        self.abidx = -1
         self.batter = -1
         self.pitcher = -1
         self.inning = 1

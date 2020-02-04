@@ -16,6 +16,7 @@ class Strikezone(object):
         self.ymin = binsy[0]
         self.ymax = binsy[-1]
 
+
         # filter out non-called pitches and pitches with no pfx data
         pitch_df = pitch_df.query("px>-900 & (strike_type=='C' | strike_type=='B')")
         # add normalized pz column
@@ -85,18 +86,23 @@ class Strikezone(object):
 
         self._plot(sz, extent, fig=fig, ax=ax, zlim=zlim, sz_zbounds=sz_zbounds, interp=interp, cb=cb)
 
-    def get_prob(self, x, z, mean_szbot, mean_sztop, use_smoothed=False):
+    def get_prob(self, x, z, szbot=0, sztop=1, use_smoothed=False):
         if use_smoothed and self.prob_map_smoothed is None:
             raise Exception("must compute smoothed strikezone before getting probability!")
-        znorm = (z-mean_szbot)/(mean_sztop-mean_szbot)
+        znorm = (z-szbot)/(sztop-szbot)
         sz = self.prob_map if not use_smoothed else self.prob_map_smoothed
-        binsx = np.linspace(self.xmin, self.xmax, sz.shape[0]+1)
-        binsy = np.linspace(self.ymin, self.ymax, sz.shape[1]+1)
-        ix = np.argmax(binsx > x)
-        iz = np.argmax(binsy > znorm)
-        if ix==0 or iz==0:
+        
+        dx = (self.xmax-self.xmin)/(sz.shape[0]-1)
+        dy = (self.ymax-self.ymin)/(sz.shape[1]-1)
+
+        ix = int((x-self.xmin)/dx)
+        iz = int((znorm-self.ymin)/dy)
+
+        if ix<0 or (self.xmin+ix*dx > self.xmax) or \
+                iz<0 or (self.ymin+iz*dy > self.ymax):
             return 0.0
-        return sz[ix-1, iz-1]
+
+        return sz[ix, iz]
 
 class StrikezoneCollection:
     def __init__(self):

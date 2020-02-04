@@ -38,7 +38,7 @@ def GetCountBasedWinProb(inning, half, base_state, outs, ascore, hscore, balls, 
     iw_corr = 1.0
     if "Intent Walk" in co and ("Intent Walk", base_state, outs) not in run_exp:
         iw_corr *= 1.0 / (1.0 - co["Intent Walk"])
-
+ 
     prob = 0.0
     for outcome in co:
         key = (outcome, base_state, outs)
@@ -53,14 +53,16 @@ def GetCountBasedWinProb(inning, half, base_state, outs, ascore, hscore, balls, 
                 prob += co[outcome] * pruns * (1.0*(margin>0) + 0.5*(margin==0))
             else:
                 prob += co[outcome] * pruns * h_wp.GetContents(h_wp.FindBin(margin))
-
+ 
     return prob*iw_corr
 
 if __name__=="__main__":
-    
-    LoadWinProbFile("../data/win_probabilities.pkl")
-    LoadCountOutcomeFile("../data/count_outcomes.json")
-    LoadRunExpectancies("../data/run_expectancies_by_event.pkl")
+
+    # yg = (2019,)
+    yg = (2014,2019)
+    LoadWinProbFile("../data/win_probabilities.pkl", year_group=yg)
+    LoadCountOutcomeFile("../data/count_outcomes.json", year_group=yg)
+    LoadRunExpectancies("../data/run_expectancies_by_event.pkl", year_group=yg)
 
     # from itertools import product
     # from tqdm import tqdm
@@ -80,8 +82,11 @@ if __name__=="__main__":
     # for s in states[-1:-11:-1]:
     #     print "{0:+.4f} {1:.4f} {2:.4f}".format(*diffs[s]), s
 
-    for b in range(4):
-        for s in range(3):
-            print "{0}-{1}  {2:.3f}".format(b,s, GetCountBasedWinProb(9, 'bottom', 7, 2, 5, 4, b, s))
+    for b in range(5):
+        for s in range(4):
+            if b==4 and s==3: 
+                continue
+            print "{0}-{1}  {2:.3f}".format(b,s, GetCountBasedWinProb(9, 'top', 3, 0, 5, 6, b, s))
 
+    # GetCountBasedWinProb(6, 'top', 0, 1, 1, 8, 3, 0)
 

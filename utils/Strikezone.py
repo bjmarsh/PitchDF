@@ -55,7 +55,7 @@ class Strikezone(object):
         self.prob_map_smoothed = np.copy(new_sz)
 
     @staticmethod
-    def _plot(sz, extent, fig=None, ax=None, zlim=(0.0,1.0), sz_zbounds=None, interp='none', cb=True):
+    def _plot(sz, extent, fig=None, ax=None, zlim=(0.0,1.0), sz_zbounds=None, interp='none', axis=True, cb=True):
         if not fig:
             fig = plt.gcf()
         if not ax:
@@ -66,15 +66,18 @@ class Strikezone(object):
         if cb:
             cb = fig.colorbar(im)
             cb.set_label("Prob(called strike)")
+        if not axis:
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
         mean_szbot, mean_sztop = (0,1) if not sz_zbounds else tuple(sz_zbounds)
-        ax.plot([-8.5/12,8.5/12], [mean_szbot, mean_szbot], '-', color='lime', lw=2)
-        ax.plot([-8.5/12,8.5/12], [mean_sztop, mean_sztop], '-', color='lime', lw=2)
-        ax.plot([8.5/12,8.5/12], [mean_szbot, mean_sztop], '-', color='lime', lw=2)
-        ax.plot([-8.5/12,-8.5/12], [mean_szbot, mean_sztop], '-', color='lime', lw=2)
+        ax.plot([-8.5/12,8.5/12], [mean_szbot, mean_szbot], '-', color='black', lw=2)
+        ax.plot([-8.5/12,8.5/12], [mean_sztop, mean_sztop], '-', color='black', lw=2)
+        ax.plot([8.5/12,8.5/12], [mean_szbot, mean_sztop], '-', color='black', lw=2)
+        ax.plot([-8.5/12,-8.5/12], [mean_szbot, mean_sztop], '-', color='black', lw=2)
         ax.set_xlabel("x (ft)")
         ax.set_ylabel("z ({0})".format("ft" if sz_zbounds else "norm"))
 
-    def plot(self, fig=None, ax=None, zlim=(0.0,1.0), smoothed=False, sz_zbounds=None, interp='none', cb=True):
+    def plot(self, fig=None, ax=None, zlim=(0.0,1.0), smoothed=False, sz_zbounds=None, interp='none', axis=True, cb=True):
         if smoothed and self.prob_map_smoothed is None:
             raise Exception("must compute smoothed strikezone before plotting!")
         sz = self.prob_map if not smoothed else self.prob_map_smoothed
@@ -84,7 +87,7 @@ class Strikezone(object):
             extent[2] = extent[2]*(sz_zbounds[1]-sz_zbounds[0]) + sz_zbounds[0]
             extent[3] = extent[3]*(sz_zbounds[1]-sz_zbounds[0]) + sz_zbounds[0]
 
-        self._plot(sz, extent, fig=fig, ax=ax, zlim=zlim, sz_zbounds=sz_zbounds, interp=interp, cb=cb)
+        self._plot(sz, extent, fig=fig, ax=ax, zlim=zlim, sz_zbounds=sz_zbounds, interp=interp, axis=axis, cb=cb)
 
     def get_prob(self, x, z, szbot=0, sztop=1, use_smoothed=False):
         if use_smoothed and self.prob_map_smoothed is None:

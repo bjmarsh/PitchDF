@@ -67,17 +67,21 @@ class Histogram1D(object):
             return None
         return (self.sumx2 - self.sumx**2)/N
 
-    def Draw(self, fig=None, ax=None, opt="HIST", color='b', lw=1):
+    def Draw(self, fig=None, ax=None, opt="HIST", **kwargs):
         if not fig:
             fig = plt.gcf()
         if not ax:
             ax = fig.add_subplot(111)
-
+        
+        didplot = False
         if "HIST" in opt:
             plt.hist(self.bin_centers, bins=self.bin_edges, weights=self.contents[1:-1], histtype="step", 
-                     color=color, lw=lw)
+                     **kwargs)
+            didplot = True
+        if didplot:
+            kwargs['label'] = None
         if "ERR" in opt:
             errors = np.sqrt(self.sumw2)
             xerr = None if "YERR" in opt else self.bin_widths/2
             plt.errorbar(self.bin_centers, self.contents[1:-1], xerr=xerr, yerr=errors[1:-1], 
-                         fmt=',', color=color, capsize=0, lw=lw)
+                         fmt=',', capsize=0, **kwargs)

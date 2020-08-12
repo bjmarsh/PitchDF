@@ -55,13 +55,14 @@ class Strikezone(object):
         self.prob_map_smoothed = np.copy(new_sz)
 
     @staticmethod
-    def _plot(sz, extent, fig=None, ax=None, zlim=(0.0,1.0), sz_zbounds=None, interp='none', axis=True, cb=True):
+    def _plot(sz, extent, fig=None, ax=None, zlim=(0.0,1.0), sz_zbounds=None, interp='none', axis=True, cb=True, flipx=False):
         if not fig:
             fig = plt.gcf()
         if not ax:
             ax = fig.add_subplot(111)
 
-        im = ax.imshow(sz.T, interpolation=interp, cmap='RdBu_r', extent=extent, 
+        flip = -1 if flipx else 1
+        im = ax.imshow(sz.T[:,::flip], interpolation=interp, cmap='RdBu_r', extent=extent, 
                        origin='low', aspect='auto', vmin=zlim[0], vmax=zlim[1])
         if cb:
             cb = fig.colorbar(im)
@@ -77,7 +78,7 @@ class Strikezone(object):
         ax.set_xlabel("x (ft)")
         ax.set_ylabel("z ({0})".format("ft" if sz_zbounds else "norm"))
 
-    def plot(self, fig=None, ax=None, zlim=(0.0,1.0), smoothed=False, sz_zbounds=None, interp='none', axis=True, cb=True):
+    def plot(self, fig=None, ax=None, zlim=(0.0,1.0), smoothed=False, sz_zbounds=None, interp='none', axis=True, cb=True, flipx=False):
         if smoothed and self.prob_map_smoothed is None:
             raise Exception("must compute smoothed strikezone before plotting!")
         sz = self.prob_map if not smoothed else self.prob_map_smoothed
@@ -87,7 +88,7 @@ class Strikezone(object):
             extent[2] = extent[2]*(sz_zbounds[1]-sz_zbounds[0]) + sz_zbounds[0]
             extent[3] = extent[3]*(sz_zbounds[1]-sz_zbounds[0]) + sz_zbounds[0]
 
-        self._plot(sz, extent, fig=fig, ax=ax, zlim=zlim, sz_zbounds=sz_zbounds, interp=interp, axis=axis, cb=cb)
+        self._plot(sz, extent, fig=fig, ax=ax, zlim=zlim, sz_zbounds=sz_zbounds, interp=interp, axis=axis, cb=cb, flipx=flipx)
 
     def get_prob(self, x, z, szbot=0, sztop=1, use_smoothed=False):
         if use_smoothed and self.prob_map_smoothed is None:

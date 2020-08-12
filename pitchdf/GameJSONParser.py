@@ -131,9 +131,9 @@ class GameJSONParser:
         self.game_state.pitch_counts[self.game_state.pitcher] += 1
         self.game_state.cur_pc = self.game_state.pitch_counts[self.game_state.pitcher]
 
-        if pinfo.type == "B":
+        if pinfo.type in ['B', '*B', 'V', 'P']:
             self.game_state.b += 1
-        if pinfo.type == "S" and (self.game_state.s < 2 or pinfo.des != "Foul"):
+        if pinfo.type not in ['B','*B','V','P','D','X','E'] and (self.game_state.s < 2 or pinfo.des != "Foul"):
             self.game_state.s += 1
 
 
@@ -141,9 +141,9 @@ class GameJSONParser:
             # sometimes the ball count is broken after a hit by pitch... 
             # shouldn't matter anyway as it's the last pitch of AB
             if self.game_state.b != pitch["count"]["balls"]:
-                raise Exception("Balls mismatch!")
+                raise Exception("Balls mismatch! (atBatIndex: {0}, pitchNumber: {1}, {2}, {3})".format(self.game_state.abidx, pitch["pitchNumber"], self.game_state.s, pitch["count"]["strikes"]))
             if self.game_state.s != pitch["count"]["strikes"]:
-                raise Exception("Strikes mismatch!")
+                raise Exception("Strikes mismatch! (atBatIndex: {0}, pitchNumber: {1}, {2}, {3})".format(self.game_state.abidx, pitch["pitchNumber"], self.game_state.s, pitch["count"]["strikes"]))
 
 
     def process_atbat(self, atbat):
@@ -210,7 +210,10 @@ class GameJSONParser:
 
         for event,runners in events:
             if event is not None:
-                if event["type"] == "pitch":
+                if event["type"] == "no_pitch":
+                    # ??????
+                    pass
+                elif event["type"] == "pitch":
                     self.process_pitch(event)
                     pass
                 elif event["type"] == "action":
@@ -233,7 +236,7 @@ class GameJSONParser:
                             r_name = event["details"]["description"].split("replaces ")[-1].replace(".","").replace(" ","") \
                                         .replace("CCron","CJCron").replace("JHardy","JJHardy").replace("APollock","AJPollock") \
                                         .replace("AEllis","AJEllis").replace("JMartinez","JDMartinez") \
-                                        .replace("NickCastellanos","NicholasCastellanos").replace("NoriAoki","NorichikaAoki") \
+                                        .replace("NickCastellanosXXX","NicholasCastellanos").replace("NoriAoki","NorichikaAoki") \
                                         .replace("JArencibia","JPArencibia").replace("CarlosSanchez","YolmerSanchez") \
                                         .replace("RickieWeeks","RickieWeeksJr").replace("GiovannyUrshela","GioUrshela") \
                                         .replace("IvanDeJesus","IvanDeJesusJr").replace("APierzynski","AJPierzynski") \
@@ -243,6 +246,7 @@ class GameJSONParser:
                                         .replace("LaMonteWade","LaMonteWadeJr") \
                                         .replace("JrJr","Jr")
                             if r_name not in self.runner_dict:
+                                print "runner_dict:", self.runner_dict
                                 raise Exception("Pinch-runner replacing {0}, who doesn't appear to be on the bases".format(r_name))
                             pid = self.runner_dict[r_name]
                             for b in ["first","second","third"]:
@@ -250,6 +254,13 @@ class GameJSONParser:
                                     setattr(gs, b,  event["player"]["id"])
                             pr_name = event["details"]["description"].split(" replaces")[0].split("-runner ")[-1].replace(".","").replace(" ","")
                             self.runner_dict[pr_name] = event["player"]["id"]
+
+                    elif evttype == "Runner Placed On Base" and "2nd" in event["details"]["description"]:
+                        # stupid 2020 rule where runner starts on second in extras
+                        gs.second = event["player"]["id"]
+                        gs.base_state = 2
+                        name = event["details"]["description"].split(" starts inning")[0].replace(" ","").replace(".","")
+                        self.runner_dict[name] = gs.second
 
                     elif evttype in self.ignore_actions:
                         pass
@@ -264,6 +275,7 @@ class GameJSONParser:
             runners = sorted(runners, key=lambda x:x["movement"]["isOut"], reverse=True)
             to_do = list(range(len(runners)))
             isout = []
+
             while len(to_do)>0:
                 idx = to_do[0]
                 rid = runners[idx]["details"]["runner"]["id"]
@@ -304,7 +316,9 @@ class GameJSONParser:
                     runners[idx]["movement"]["start"] = "2B"
                 if gs.gamePk==599336 and rid==665742 and gs.inning==8 and gs.half=="bottom" and runners[idx]["movement"]["start"] == "2B":
                     runners[idx]["movement"]["start"] = "1B"
-                
+                if gs.gamePk==631014 and runners[idx]["movement"]["end"] == "0B":
+                    to_do = to_do[1:]
+                    continue
 
                 start = runners[idx]["movement"]["start"]
                 end = runners[idx]["movement"]["end"]
@@ -342,9 +356,20 @@ class GameJSONParser:
                     setattr(gs, self.base_map[start], rid)
 
                 # make sure start is None (i.e. it's the batter), or the runner is already at start
+
+                clear_path = True
+                if (end=='1B' or start is None and end in ['2B','3B']) and gs.first != -1:
+                    clear_path = False
+                if (end=='2B' or start in [None, '1B'] and end=='3B') and gs.second != -1:
+                    clear_path = False
+                if end=='3B' and gs.third != -1:
+                    clear_path = False
+
+                # print gs.half, gs.inning, gs.o, rid, start, end, gs.first, gs.second, gs.third
+
                 if (start is None or \
                     getattr(gs, self.base_map[start]) == rid) and \
-                   (end in [None, 'score'] or gs.o==3 or getattr(gs, self.base_map[end]) == -1):
+                   (end in [None, 'score'] or gs.o==3 or clear_path):
                     self.process_runner(runners[idx])
                     to_do = to_do[1:]
                     if end is None or end is 'score':

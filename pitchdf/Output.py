@@ -13,7 +13,13 @@ class Output:
     @staticmethod
     def get_strike_type(pitch):
         st = pitch.type
-        if st=='S':
+        if st=='V':
+            st = 'I' # Automatic Ball
+        elif st in ['B', '*B', 'H', 'P']:
+            st = 'B'
+        elif 'In play' in pitch.des:
+            st = 'X'
+        else:
             if 'Called' in pitch.des:
                 st = 'C'
             elif 'Swinging' in pitch.des:
